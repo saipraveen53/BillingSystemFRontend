@@ -1,23 +1,41 @@
-import { Link } from 'expo-router';
-import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { Link, router } from 'expo-router';
+import { jwtDecode } from "jwt-decode";
+import React, { useContext, useState } from 'react';
 import {
   ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import { BillContext } from './(utils)/BillingContext';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const {isAuthenticated,setAuthenticated,decoded,setDecoded}=useContext(BillContext);
+  const [emaill, setEmail] = useState('');
+  const [passwordd, setPassword] = useState('');
 
-  const handleLogin = () => {
-    console.log('Email:', email);
-    console.log('Password:', password);
+  const handleLogin = async() => {
+
+    const dto ={
+      email:emaill,
+      password:passwordd
+    }
+    
+
+      let response = await axios.post(`http://192.168.0.217:8080/auth/login`,dto);
+      console.log(response.data);
+      await AsyncStorage.setItem("userToken",response.data)
+      setAuthenticated(true);
+      router.replace('/(home)/Homepage')
+      const tokendata=jwtDecode(response.data);
+      console.log(tokendata);
+      setDecoded(tokendata);
+
+
   };
 
   return (
@@ -85,7 +103,7 @@ const LoginScreen = () => {
               <View style={{ marginBottom: 16 }}>
                 <TextInput
                   placeholder="Email"
-                  value={email}
+                  value={emaill}
                   onChangeText={(e)=>{setEmail(e)}}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -104,7 +122,7 @@ const LoginScreen = () => {
               <View style={{ marginBottom: 20 }}>
                 <TextInput
                   placeholder="Password"
-                  value={password}
+                  value={passwordd}
                   onChangeText={(e)=>setPassword(e)}
                   secureTextEntry
                   style={{

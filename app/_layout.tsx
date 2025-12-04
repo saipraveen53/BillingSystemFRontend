@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import BillingContext from '../app/(utils)/BillingContext';
 import './globals.css';
 
+
 export default function RootLayout() {
   return (
 <BillingContext>

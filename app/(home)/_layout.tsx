@@ -1,12 +1,13 @@
-import { Stack } from 'expo-router'
+import { Tabs } from 'expo-router'
 import React from 'react'
 
 const Homelayout = () => {
   return (
     
-    <Stack>
-        <Stack.Screen name='Homepage' />
-    </Stack>
+    <Tabs>
+        <Tabs.Screen name='Homepage' />
+        <Tabs.Screen name='Cashiers' />
+    </Tabs>
 
   )
 }

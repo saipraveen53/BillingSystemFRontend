@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { jwtDecode } from "jwt-decode";
 import React, { useContext, useState } from 'react';
 import {
@@ -166,12 +166,12 @@ const LoginScreen = () => {
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: '#444' }}>Don't have an account? </Text>
+                {/* <Text style={{ color: '#444' }}>Don't have an account? </Text>
                 <Link href="/(auth)/signup">
                   <Text style={{ color: '#0056ff', fontWeight: 'bold' }}>
                     Sign Up
                   </Text>
-                </Link>
+                </Link> */}
               </View>
             </View>
           </View>

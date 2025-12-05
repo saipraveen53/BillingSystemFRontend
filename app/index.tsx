@@ -14,7 +14,7 @@ import {
 import { BillContext } from './(utils)/BillingContext';
 
 const LoginScreen = () => {
-  const {isAuthenticated,setAuthenticated,decoded,setDecoded}=useContext(BillContext);
+  const {isAuthenticated,setAuthenticated,decoded,setDecoded,role,setRole}=useContext(BillContext);
   const [emaill, setEmail] = useState('');
   const [passwordd, setPassword] = useState('');
 
@@ -30,10 +30,15 @@ const LoginScreen = () => {
       console.log(response.data);
       await AsyncStorage.setItem("userToken",response.data)
       setAuthenticated(true);
-      router.replace('/(home)/Homepage')
       const tokendata=jwtDecode(response.data);
       console.log(tokendata);
       setDecoded(tokendata);
+       const role = await AsyncStorage.setItem("role",tokendata?.roles[0]);
+       const isAdmin =await AsyncStorage.getItem("role");
+      setRole(role);
+     {isAdmin =="ROLE_ADMIN"?(router.replace('/(home)/Homepage')):(router.replace('/(cashier)/Ss'))} 
+      
+
 
 
   };

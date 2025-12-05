@@ -38,6 +38,14 @@ const initialNewCategoryState = {
   active: true,
 };
 
+// Initial state for Change Password form
+const initialPasswordFormData = {
+  oldPassword: '',
+  newPassword: '',
+  confirmNewPassword: '',
+};
+
+
 const Homepage = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -51,8 +59,17 @@ const Homepage = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
   const [addCategoryModalVisible, setAddCategoryModalVisible] = useState(false);
+  const [userMenuModalVisible, setUserMenuModalVisible] = useState(false);
+  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false); // New state for Change Password Modal
+  
   const [newProductData, setNewProductData] = useState(initialNewProductState);
   const [newCategoryData, setNewCategoryData] = useState(initialNewCategoryState);
+  const [passwordFormData, setPasswordFormData] = useState(initialPasswordFormData); // New state for password form
+
+  // --- NEW STATES FOR PASSWORD VISIBILITY ---
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [editData, setEditData] = useState({
     id: '',
@@ -228,6 +245,7 @@ const Homepage = () => {
   };
 
   const handleLogout = () => {
+    setUserMenuModalVisible(false);
     if (Platform.OS === 'web') {
       const confirm = window.confirm("Are you sure you want to logout?");
       if (confirm) performLogout();
@@ -247,6 +265,66 @@ const Homepage = () => {
     await AsyncStorage.clear();
     router.replace('/');
   };
+
+  // --- Change Password Handlers ---
+  const handleChangePassword = () => {
+    setUserMenuModalVisible(false); // Close the menu modal
+    setPasswordFormData(initialPasswordFormData); // Reset form
+    
+    // Reset Visibility
+    setShowOldPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+
+    setChangePasswordModalVisible(true); // Open the Change Password modal
+  };
+
+  const handleChangePasswordSubmit = async () => {
+    const { oldPassword, newPassword, confirmNewPassword } = passwordFormData;
+
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      Alert.alert("Error", "All fields are required.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert("Error", "New password and confirmation do not match.");
+      return;
+    }
+
+    // Client-side validation for simple password strength can be added here
+    if (newPassword.length < 6) {
+        Alert.alert("Error", "New password must be at least 6 characters long.");
+        return;
+    }
+
+    try {
+      const dto = {
+        oldPassword,
+        newPassword,
+        confirmNewPassword, // Sending all fields as per request, even if the backend only uses two
+      };
+
+      // API call to change password
+      let response = await rootApi.post(
+        `http://192.168.0.217:8080/api/auth/change-password`,
+        dto
+      );
+
+      console.log("Password Change Response:", response.data);
+
+      Alert.alert("Success", "Your password has been changed successfully!");
+      setChangePasswordModalVisible(false);
+      setPasswordFormData(initialPasswordFormData);
+
+    } catch (error) {
+      console.log("Change Password Error:", error);
+      const errorMessage = error.response?.data?.message || "Failed to change password. Check your old password.";
+      Alert.alert("Error", errorMessage);
+    }
+  };
+  // --- END Change Password Handlers ---
+
 
   // Memoized FormInput component to prevent unnecessary re-renders
   const FormInput = useMemo(() => React.memo(({ label, value, onChangeText, keyboardType = 'default', isDropdown = false }) => (
@@ -370,8 +448,13 @@ const Homepage = () => {
             <Text className="text-white text-2xl font-bold tracking-wide">Store Inventory</Text>
             <Text className="text-blue-200 text-sm">Total Products: {products.length}</Text>
           </View>
-          <TouchableOpacity onPress={handleLogout} className="bg-blue-800 p-2 rounded-lg border border-blue-700">
-            <MaterialIcons name="logout" size={22} color="white" />
+          
+          {/* --- User Icon to open Menu Modal --- */}
+          <TouchableOpacity 
+            onPress={() => setUserMenuModalVisible(true)} 
+            className="bg-blue-800 p-2 rounded-full border border-blue-700"
+          >
+            <FontAwesome5 name="user-circle" size={22} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -433,13 +516,14 @@ const Homepage = () => {
         )}
       </View>
 
-      {/* EDIT MODAL */}
+      {/* --------------------- EDIT MODAL --------------------- */}
       <Modal visible={editModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
           <View className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90%]">
             <Text className="text-xl font-bold text-center mb-4 text-gray-800">Edit Product Details</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {Object.keys(editData).map(key => {
+                // HSN and GST are hidden here for simplicity
                 if(['active', 'discountType', 'hsnCode', 'gstPercent'].includes(key)) return null;
 
                 let keyboard = ['id', 'price', 'discountValue', 'stockQty', 'categoryId'].includes(key) ? 'numeric' : 'default';
@@ -467,13 +551,14 @@ const Homepage = () => {
         </View>
       </Modal>
 
-      {/* ADD PRODUCT MODAL */}
+      {/* --------------------- ADD PRODUCT MODAL --------------------- */}
       <Modal visible={addProductModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
           <View className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90%]">
             <Text className="text-xl font-bold text-center mb-4 text-gray-800">Add New Product</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {Object.keys(initialNewProductState).map(key => {
+                // HSN and GST are hidden here for simplicity
                 if(['hsnCode', 'gstPercent'].includes(key)) return null;
 
                 let keyboard = ['price', 'discountValue', 'stockQty', 'categoryId'].includes(key) ? 'numeric' : 'default';
@@ -507,7 +592,7 @@ const Homepage = () => {
         </View>
       </Modal>
 
-      {/* ADD CATEGORY MODAL */}
+      {/* --------------------- ADD CATEGORY MODAL --------------------- */}
       <Modal visible={addCategoryModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
           <View className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90%]">
@@ -561,6 +646,134 @@ const Homepage = () => {
           </View>
         </View>
       </Modal>
+      
+      {/* --------------------- USER MENU MODAL --------------------- */}
+      <Modal visible={userMenuModalVisible} animationType="fade" transparent>
+          <TouchableOpacity 
+              className="flex-1 bg-black/30 items-end justify-start pt-10" 
+              onPress={() => setUserMenuModalVisible(false)} 
+              activeOpacity={1}
+          >
+              <View className="bg-white w-56 rounded-lg shadow-xl overflow-hidden mt-6 mr-3">
+                  
+                  <Text className="p-3 text-sm text-gray-500 border-b border-gray-100 font-semibold">User Actions</Text>
+
+                  {/* Change Password Option - Calls new handler */}
+                  <TouchableOpacity 
+                      onPress={handleChangePassword} 
+                      className="flex-row items-center p-3 active:bg-gray-50"
+                  >
+                      <MaterialIcons name="lock-outline" size={20} color="#2563EB" />
+                      <Text className="text-gray-700 ml-3 font-medium">Change Password</Text>
+                  </TouchableOpacity>
+
+                  {/* Logout Option */}
+                  <TouchableOpacity 
+                      onPress={handleLogout}
+                      className="flex-row items-center p-3 border-t border-gray-200 active:bg-gray-50"
+                  >
+                      <MaterialIcons name="logout" size={20} color="#DC2626" />
+                      <Text className="text-red-600 ml-3 font-medium">Logout</Text>
+                  </TouchableOpacity>
+              </View>
+          </TouchableOpacity>
+      </Modal>
+      
+      {/* --------------------- NEW: CHANGE PASSWORD MODAL --------------------- */}
+      <Modal visible={changePasswordModalVisible} animationType="slide" transparent>
+        <View className="flex-1 bg-black/50 justify-center items-center p-4">
+          <View className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+            <Text className="text-xl font-bold text-center mb-6 text-gray-800">Change Password</Text>
+            
+            <View className="gap-4">
+              {/* Old Password */}
+              <View>
+                <Text className="text-xs text-gray-500 uppercase font-bold mb-1">Old Password</Text>
+                <View className="relative justify-center">
+                  <TextInput
+                    value={passwordFormData.oldPassword}
+                    onChangeText={(text) => setPasswordFormData(prev => ({ ...prev, oldPassword: text }))}
+                    secureTextEntry={!showOldPassword}
+                    placeholder="Enter old password"
+                    className="border border-gray-300 rounded-lg p-3 text-gray-800 bg-gray-50 pr-10"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowOldPassword(!showOldPassword)}
+                    className="absolute right-3"
+                  >
+                    <Ionicons 
+                      name={showOldPassword ? "eye" : "eye-off"} 
+                      size={20} 
+                      color="gray" 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* New Password */}
+              <View>
+                <Text className="text-xs text-gray-500 uppercase font-bold mb-1">New Password</Text>
+                <View className="relative justify-center">
+                  <TextInput
+                    value={passwordFormData.newPassword}
+                    onChangeText={(text) => setPasswordFormData(prev => ({ ...prev, newPassword: text }))}
+                    secureTextEntry={!showNewPassword}
+                    placeholder="Enter new password"
+                    className="border border-gray-300 rounded-lg p-3 text-gray-800 bg-gray-50 pr-10"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3"
+                  >
+                    <Ionicons 
+                      name={showNewPassword ? "eye" : "eye-off"} 
+                      size={20} 
+                      color="gray" 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Confirm New Password */}
+              <View>
+                <Text className="text-xs text-gray-500 uppercase font-bold mb-1">Confirm New Password</Text>
+                <View className="relative justify-center">
+                  <TextInput
+                    value={passwordFormData.confirmNewPassword}
+                    onChangeText={(text) => setPasswordFormData(prev => ({ ...prev, confirmNewPassword: text }))}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Confirm new password"
+                    className="border border-gray-300 rounded-lg p-3 text-gray-800 bg-gray-50 pr-10"
+                  />
+                   <TouchableOpacity 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3"
+                  >
+                    <Ionicons 
+                      name={showConfirmPassword ? "eye" : "eye-off"} 
+                      size={20} 
+                      color="gray" 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <View className="mt-6 gap-3">
+              <TouchableOpacity onPress={handleChangePasswordSubmit} className="bg-blue-600 py-3 rounded-lg">
+                <Text className="text-white text-center font-bold text-lg">Save New Password</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setChangePasswordModalVisible(false)} 
+                className="bg-gray-200 py-3 rounded-lg"
+              >
+                <Text className="text-gray-700 text-center font-bold text-lg">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 };

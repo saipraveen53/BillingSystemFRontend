@@ -9,7 +9,7 @@ const Ss = () => {
   const handleLogout = async () => {
     try {
       await AsyncStorage.clear();   // remove all stored keys
-      router.replace('/');   // navigate to login
+      router.replace('/');   // navigate to loginn
     } catch (err) {
       console.log("Logout Error:", err);
     }

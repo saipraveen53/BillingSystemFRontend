@@ -13,6 +13,7 @@ const Homelayout = () => {
     
       <Tabs  screenOptions={{headerShown:false}}  >
         <Tabs.Screen name="Homepage" />
+        <Tabs.Screen name="Categories" />
         <Tabs.Screen name="Cashiers" />
       </Tabs>
     

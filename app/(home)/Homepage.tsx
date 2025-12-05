@@ -1,7 +1,7 @@
 import { Feather, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -62,7 +62,7 @@ const Homepage = () => {
   const [addCategoryModalVisible, setAddCategoryModalVisible] = useState(false);
   const [userMenuModalVisible, setUserMenuModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
-  
+
   // --- STATE FOR TOOLTIP ---
   const [hoveredButton, setHoveredButton] = useState(null); // 'category' | 'product' | null
 
@@ -94,7 +94,7 @@ const Homepage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      let response = await rootApi.get(`http://192.168.0.110:8085/api/billing/all`);
+      let response = await rootApi.get(`api/billing/all`);
       setProducts(response.data);
     } catch (error) {
       console.log('Fetch Error:', error);
@@ -110,8 +110,8 @@ const Homepage = () => {
 
   const filteredProducts = products.filter((item) => {
     const matchesSearch = (item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (item.barcode && item.barcode.includes(searchQuery));
-    
+      (item.barcode && item.barcode.includes(searchQuery));
+
     const matchesCategory = selectedCategory === 'All' || item.categoryId?.toString() === selectedCategory;
 
     return matchesSearch && matchesCategory;
@@ -302,8 +302,8 @@ const Homepage = () => {
     }
 
     if (newPassword.length < 6) {
-        Alert.alert("Error", "New password must be at least 6 characters long.");
-        return;
+      Alert.alert("Error", "New password must be at least 6 characters long.");
+      return;
     }
 
     try {
@@ -314,16 +314,14 @@ const Homepage = () => {
       };
 
       let response = await rootApi.post(
-        `http://192.168.0.217:8080/api/auth/change-password`,
+        `http://192.168.0.110:8085/api/auth/change-password`,
         dto
       );
 
       console.log("Password Change Response:", response.data);
-
       Alert.alert("Success", "Your password has been changed successfully!");
       setChangePasswordModalVisible(false);
       setPasswordFormData(initialPasswordFormData);
-
     } catch (error) {
       console.log("Change Password Error:", error);
       const errorMessage = error.response?.data?.message || "Failed to change password. Check your old password.";
@@ -332,24 +330,23 @@ const Homepage = () => {
   };
 
   // --- MODERN FORM INPUT COMPONENT ---
-  // Added 'icon' prop for modern look
-  const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default', isDropdown = false, icon, placeholder }) => (
+  const ModernFormInput = useCallback(({ label, value, onChangeText, keyboardType = 'default', isDropdown = false, icon, placeholder }) => (
     <View className="mb-4 flex-1">
       <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">
         {label.replace(/([A-Z])/g, ' $1').trim()}
       </Text>
       <View className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 focus:border-blue-500 focus:bg-white overflow-hidden h-12">
         {icon && (
-            <View className="pl-3 pr-2 border-r border-gray-200">
-                <Ionicons name={icon} size={20} color="#6B7280" />
-            </View>
+          <View className="pl-3 pr-2 border-r border-gray-200">
+            <Ionicons name={icon} size={20} color="#6B7280" />
+          </View>
         )}
         {isDropdown ? (
-             <View className="flex-1 justify-center px-3">
-                 <Text className="text-gray-800">{value}</Text>
-             </View>
+          <View className="flex-1 justify-center px-3">
+            <Text className="text-gray-800">{value}</Text>
+          </View>
         ) : (
-            <TextInput
+          <TextInput
             value={value?.toString()}
             onChangeText={onChangeText}
             className="flex-1 px-3 text-gray-800 text-base"
@@ -357,11 +354,11 @@ const Homepage = () => {
             placeholder={placeholder}
             placeholderTextColor="#9CA3AF"
             style={Platform.OS === 'web' ? { outline: 'none' } : undefined}
-            />
+          />
         )}
       </View>
     </View>
-  );
+  ), []);
 
   const renderProduct = ({ item }) => (
     <View
@@ -464,9 +461,9 @@ const Homepage = () => {
             <Text className="text-white text-xl font-bold tracking-wide">Store Inventory</Text>
             <Text className="text-blue-200 text-xs">Total Products: {products.length}</Text>
           </View>
-          
-          <TouchableOpacity 
-            onPress={() => setUserMenuModalVisible(true)} 
+
+          <TouchableOpacity
+            onPress={() => setUserMenuModalVisible(true)}
             className="bg-blue-800 p-2 rounded-full border border-blue-700"
           >
             <FontAwesome5 name="user-circle" size={20} color="white" />
@@ -495,64 +492,62 @@ const Homepage = () => {
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100 z-0">
         {/* Left: Category Chips */}
         <View className="flex-1 mr-4">
-             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {categories.map((cat, index) => (
-                    <TouchableOpacity 
-                        key={index} 
-                        onPress={() => setSelectedCategory(cat)}
-                        className={`px-4 py-2 rounded-full mr-2 border ${
-                            selectedCategory === cat 
-                            ? 'bg-blue-600 border-blue-600' 
-                            : 'bg-white border-gray-300'
-                        }`}
-                    >
-                        <Text className={`text-xs font-bold ${
-                            selectedCategory === cat ? 'text-white' : 'text-gray-600'
-                        }`}>
-                            {cat === 'All' ? 'All Items' : `Cat: ${cat}`}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-             </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {categories.map((cat, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-full mr-2 border ${
+                  selectedCategory === cat
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'bg-white border-gray-300'
+                }`}
+              >
+                <Text className={`text-xs font-bold ${
+                  selectedCategory === cat ? 'text-white' : 'text-gray-600'
+                }`}>
+                  {cat === 'All' ? 'All Items' : `Cat: ${cat}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Right: Add Buttons with Tooltip/Hover Effect */}
         <View className="flex-row gap-2 relative z-50">
-            {/* Add Category Button */}
-            <View>
-                <TouchableOpacity
-                    onPress={() => setAddCategoryModalVisible(true)}
-                    // @ts-ignore - Web specific props for hover
-                    onMouseEnter={() => setHoveredButton('category')}
-                    onMouseLeave={() => setHoveredButton(null)}
-                    className="bg-purple-600 w-10 h-10 rounded-full items-center justify-center shadow-md relative"
-                >
-                    <MaterialIcons name="category" size={20} color="white" />
-                </TouchableOpacity>
-                {hoveredButton === 'category' && (
-                    <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
-                        <Text className="text-white text-xs font-bold">Add Category</Text>
-                    </View>
-                )}
-            </View>
+          {/* Add Category Button */}
+          <View>
+            <TouchableOpacity
+              onPress={() => setAddCategoryModalVisible(true)}
+              onMouseEnter={() => setHoveredButton('category')}
+              onMouseLeave={() => setHoveredButton(null)}
+              className="bg-purple-600 w-10 h-10 rounded-full items-center justify-center shadow-md relative"
+            >
+              <MaterialIcons name="category" size={20} color="white" />
+            </TouchableOpacity>
+            {hoveredButton === 'category' && (
+              <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
+                <Text className="text-white text-xs font-bold">Add Category</Text>
+              </View>
+            )}
+          </View>
 
-            {/* Add Product Button */}
-            <View>
-                <TouchableOpacity
-                    onPress={() => setAddProductModalVisible(true)}
-                     // @ts-ignore
-                    onMouseEnter={() => setHoveredButton('product')}
-                    onMouseLeave={() => setHoveredButton(null)}
-                    className="bg-green-600 w-10 h-10 rounded-full items-center justify-center shadow-md"
-                >
-                    <Ionicons name="add" size={24} color="white" />
-                </TouchableOpacity>
-                 {hoveredButton === 'product' && (
-                    <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
-                        <Text className="text-white text-xs font-bold">Add Product</Text>
-                    </View>
-                )}
-            </View>
+          {/* Add Product Button */}
+          <View>
+            <TouchableOpacity
+              onPress={() => setAddProductModalVisible(true)}
+              onMouseEnter={() => setHoveredButton('product')}
+              onMouseLeave={() => setHoveredButton(null)}
+              className="bg-green-600 w-10 h-10 rounded-full items-center justify-center shadow-md"
+            >
+              <Ionicons name="add" size={24} color="white" />
+            </TouchableOpacity>
+            {hoveredButton === 'product' && (
+              <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
+                <Text className="text-white text-xs font-bold">Add Product</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
@@ -583,23 +578,22 @@ const Homepage = () => {
         <View className="flex-1 bg-black/60 justify-center items-center p-4 backdrop-blur-sm">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90%] border border-gray-100">
             <Text className="text-2xl font-bold text-center mb-6 text-gray-800 border-b pb-4 border-gray-100">Edit Product</Text>
-            
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Manual grid layout for form */}
-                <View className="flex-row gap-4">
-                    <ModernFormInput label="Name" value={editData.name} onChangeText={(t)=>setEditData({...editData, name: t})} icon="pricetag" />
-                    <ModernFormInput label="Barcode" value={editData.barcode} onChangeText={(t)=>setEditData({...editData, barcode: t})} icon="qr-code" />
-                </View>
-                
-                <View className="flex-row gap-4">
-                     <ModernFormInput label="Price" value={editData.price} onChangeText={(t)=>setEditData({...editData, price: t})} keyboardType="numeric" icon="cash" />
-                     <ModernFormInput label="Stock" value={editData.stockQty} onChangeText={(t)=>setEditData({...editData, stockQty: t})} keyboardType="numeric" icon="layers" />
-                </View>
 
-                 <View className="flex-row gap-4">
-                     <ModernFormInput label="Category ID" value={editData.categoryId} onChangeText={(t)=>setEditData({...editData, categoryId: t})} keyboardType="numeric" icon="list" />
-                     <ModernFormInput label="Discount Val" value={editData.discountValue} onChangeText={(t)=>setEditData({...editData, discountValue: t})} keyboardType="numeric" icon="trending-down" />
-                </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="flex-row gap-4">
+                <ModernFormInput label="Name" value={editData.name} onChangeText={(t) => setEditData({...editData, name: t})} icon="pricetag" />
+                <ModernFormInput label="Barcode" value={editData.barcode} onChangeText={(t) => setEditData({...editData, barcode: t})} icon="qr-code" />
+              </View>
+
+              <View className="flex-row gap-4">
+                <ModernFormInput label="Price" value={editData.price} onChangeText={(t) => setEditData({...editData, price: t})} keyboardType="numeric" icon="cash" />
+                <ModernFormInput label="Stock" value={editData.stockQty} onChangeText={(t) => setEditData({...editData, stockQty: t})} keyboardType="numeric" icon="layers" />
+              </View>
+
+              <View className="flex-row gap-4">
+                <ModernFormInput label="Category ID" value={editData.categoryId} onChangeText={(t) => setEditData({...editData, categoryId: t})} keyboardType="numeric" icon="list" />
+                <ModernFormInput label="Discount Val" value={editData.discountValue} onChangeText={(t) => setEditData({...editData, discountValue: t})} keyboardType="numeric" icon="trending-down" />
+              </View>
             </ScrollView>
 
             <View className="mt-6 flex-row gap-4">
@@ -618,72 +612,68 @@ const Homepage = () => {
       <Modal visible={addProductModalVisible} animationType="fade" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-8 shadow-2xl max-h-[90%] border border-gray-100">
-            
             <View className="flex-row items-center justify-center mb-6 pb-4 border-b border-gray-100">
-                <View className="bg-green-100 p-3 rounded-full mr-3">
-                    <Ionicons name="add" size={24} color="green" />
-                </View>
-                <Text className="text-2xl font-bold text-gray-800">Add New Product</Text>
+              <View className="bg-green-100 p-3 rounded-full mr-3">
+                <Ionicons name="add" size={24} color="green" />
+              </View>
+              <Text className="text-2xl font-bold text-gray-800">Add New Product</Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Row 1: Basic Info */}
               <Text className="text-gray-400 font-bold mb-3 text-xs uppercase">Basic Information</Text>
               <View className="flex-row gap-3">
-                <ModernFormInput 
-                    label="Product Name" 
-                    placeholder="Ex: Milk 1L"
-                    value={newProductData.name} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, name: t }))} 
-                    icon="pricetag-outline"
+                <ModernFormInput
+                  label="Product Name"
+                  placeholder="Ex: Milk 1L"
+                  value={newProductData.name}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, name: t }))}
+                  icon="pricetag-outline"
                 />
-                <ModernFormInput 
-                    label="Barcode" 
-                    placeholder="Scan or Type"
-                    value={newProductData.barcode} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, barcode: t }))} 
-                    icon="qr-code-outline"
+                <ModernFormInput
+                  label="Barcode"
+                  placeholder="Scan or Type"
+                  value={newProductData.barcode}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, barcode: t }))}
+                  icon="qr-code-outline"
                 />
               </View>
 
-              {/* Row 2: Pricing & Stock */}
               <Text className="text-gray-400 font-bold mb-3 mt-2 text-xs uppercase">Pricing & Inventory</Text>
               <View className="flex-row gap-3">
-                <ModernFormInput 
-                    label="Price (MRP)" 
-                    placeholder="0.00"
-                    value={newProductData.price} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, price: t }))} 
-                    keyboardType="numeric"
-                    icon="cash-outline"
+                <ModernFormInput
+                  label="Price (MRP)"
+                  placeholder="0.00"
+                  value={newProductData.price}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, price: t }))}
+                  keyboardType="numeric"
+                  icon="cash-outline"
                 />
-                <ModernFormInput 
-                    label="Stock Qty" 
-                    placeholder="0"
-                    value={newProductData.stockQty} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, stockQty: t }))} 
-                    keyboardType="numeric"
-                    icon="cube-outline"
+                <ModernFormInput
+                  label="Stock Qty"
+                  placeholder="0"
+                  value={newProductData.stockQty}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, stockQty: t }))}
+                  keyboardType="numeric"
+                  icon="cube-outline"
                 />
               </View>
 
-              {/* Row 3: Category & Discount */}
               <View className="flex-row gap-3">
-                 <ModernFormInput 
-                    label="Category ID" 
-                    placeholder="ID"
-                    value={newProductData.categoryId} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, categoryId: t }))} 
-                    keyboardType="numeric"
-                    icon="list-outline"
+                <ModernFormInput
+                  label="Category ID"
+                  placeholder="ID"
+                  value={newProductData.categoryId}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, categoryId: t }))}
+                  keyboardType="numeric"
+                  icon="list-outline"
                 />
-                 <ModernFormInput 
-                    label="Discount Value" 
-                    placeholder="0"
-                    value={newProductData.discountValue} 
-                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, discountValue: t }))} 
-                    keyboardType="numeric"
-                    icon="trending-down-outline"
+                <ModernFormInput
+                  label="Discount Value"
+                  placeholder="0"
+                  value={newProductData.discountValue}
+                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, discountValue: t }))}
+                  keyboardType="numeric"
+                  icon="trending-down-outline"
                 />
               </View>
             </ScrollView>
@@ -692,9 +682,9 @@ const Homepage = () => {
               <TouchableOpacity onPress={() => { setAddProductModalVisible(false); setNewProductData(initialNewProductState); }} className="flex-1 bg-gray-100 py-4 rounded-xl">
                 <Text className="text-gray-600 text-center font-bold text-lg">Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity onPress={handlePrintPayload} className="w-14 bg-yellow-100 rounded-xl items-center justify-center">
-                 <Feather name="code" size={20} color="#D97706" />
+                <Feather name="code" size={20} color="#D97706" />
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleAddProduct} className="flex-1 bg-green-600 py-4 rounded-xl shadow-md">
@@ -709,53 +699,52 @@ const Homepage = () => {
       <Modal visible={addCategoryModalVisible} animationType="fade" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4">
           <View className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl border border-gray-100">
-             
-             <View className="items-center mb-6">
-                 <View className="bg-purple-100 w-16 h-16 rounded-full items-center justify-center mb-3">
-                    <MaterialIcons name="category" size={32} color="purple" />
-                 </View>
-                <Text className="text-2xl font-bold text-gray-800">New Category</Text>
-             </View>
+            <View className="items-center mb-6">
+              <View className="bg-purple-100 w-16 h-16 rounded-full items-center justify-center mb-3">
+                <MaterialIcons name="category" size={32} color="purple" />
+              </View>
+              <Text className="text-2xl font-bold text-gray-800">New Category</Text>
+            </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-               <ModernFormInput 
-                    label="Category Name" 
-                    placeholder="Ex: Dairy, Electronics"
-                    value={newCategoryData.name} 
-                    onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, name: t }))} 
-                    icon="text"
-                />
-                
-                <View className="flex-row gap-3">
-                    <ModernFormInput 
-                        label="Default HSN" 
-                        placeholder="Optional"
-                        value={newCategoryData.defaultHsn} 
-                        onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultHsn: t }))} 
-                        icon="document-text-outline"
-                    />
-                    <ModernFormInput 
-                        label="Default GST %" 
-                        placeholder="0"
-                        value={newCategoryData.defaultGst} 
-                        onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultGst: t }))} 
-                        keyboardType="numeric"
-                        icon="pie-chart-outline"
-                    />
-                </View>
+              <ModernFormInput
+                label="Category Name"
+                placeholder="Ex: Dairy, Electronics"
+                value={newCategoryData.name}
+                onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, name: t }))}
+                icon="text"
+              />
 
-                 <View className="mb-4">
-                    <Text className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wider">Status</Text>
-                    <TouchableOpacity
-                        onPress={() => setNewCategoryData(prev => ({ ...prev, active: !prev.active }))}
-                        className={`flex-row items-center justify-between p-4 rounded-xl border ${newCategoryData.active ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
-                    >
-                        <Text className={`font-bold ${newCategoryData.active ? 'text-green-700' : 'text-red-700'}`}>
-                            {newCategoryData.active ? 'Active Category' : 'Inactive Category'}
-                        </Text>
-                        <FontAwesome5 name={newCategoryData.active ? "check-circle" : "ban"} size={20} color={newCategoryData.active ? "green" : "red"} />
-                    </TouchableOpacity>
-                 </View>
+              <View className="flex-row gap-3">
+                <ModernFormInput
+                  label="Default HSN"
+                  placeholder="Optional"
+                  value={newCategoryData.defaultHsn}
+                  onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultHsn: t }))}
+                  icon="document-text-outline"
+                />
+                <ModernFormInput
+                  label="Default GST %"
+                  placeholder="0"
+                  value={newCategoryData.defaultGst}
+                  onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultGst: t }))}
+                  keyboardType="numeric"
+                  icon="pie-chart-outline"
+                />
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wider">Status</Text>
+                <TouchableOpacity
+                  onPress={() => setNewCategoryData(prev => ({ ...prev, active: !prev.active }))}
+                  className={`flex-row items-center justify-between p-4 rounded-xl border ${newCategoryData.active ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                >
+                  <Text className={`font-bold ${newCategoryData.active ? 'text-green-700' : 'text-red-700'}`}>
+                    {newCategoryData.active ? 'Active Category' : 'Inactive Category'}
+                  </Text>
+                  <FontAwesome5 name={newCategoryData.active ? "check-circle" : "ban"} size={20} color={newCategoryData.active ? "green" : "red"} />
+                </TouchableOpacity>
+              </View>
             </ScrollView>
 
             <View className="mt-6 flex-row gap-3">
@@ -769,34 +758,34 @@ const Homepage = () => {
           </View>
         </View>
       </Modal>
-      
+
       {/* --------------------- USER MENU MODAL --------------------- */}
       <Modal visible={userMenuModalVisible} animationType="fade" transparent>
-          <TouchableOpacity 
-              className="flex-1 bg-black/30 items-end justify-start pt-10" 
-              onPress={() => setUserMenuModalVisible(false)} 
-              activeOpacity={1}
-          >
-              <View className="bg-white w-56 rounded-lg shadow-xl overflow-hidden mt-6 mr-3">
-                  <Text className="p-3 text-sm text-gray-500 border-b border-gray-100 font-semibold">User Actions</Text>
-                  <TouchableOpacity 
-                      onPress={handleChangePassword} 
-                      className="flex-row items-center p-3 active:bg-gray-50"
-                  >
-                      <MaterialIcons name="lock-outline" size={20} color="#2563EB" />
-                      <Text className="text-gray-700 ml-3 font-medium">Change Password</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                      onPress={handleLogout}
-                      className="flex-row items-center p-3 border-t border-gray-200 active:bg-gray-50"
-                  >
-                      <MaterialIcons name="logout" size={20} color="#DC2626" />
-                      <Text className="text-red-600 ml-3 font-medium">Logout</Text>
-                  </TouchableOpacity>
-              </View>
-          </TouchableOpacity>
+        <TouchableOpacity
+          className="flex-1 bg-black/30 items-end justify-start pt-10"
+          onPress={() => setUserMenuModalVisible(false)}
+          activeOpacity={1}
+        >
+          <View className="bg-white w-56 rounded-lg shadow-xl overflow-hidden mt-6 mr-3">
+            <Text className="p-3 text-sm text-gray-500 border-b border-gray-100 font-semibold">User Actions</Text>
+            <TouchableOpacity
+              onPress={handleChangePassword}
+              className="flex-row items-center p-3 active:bg-gray-50"
+            >
+              <MaterialIcons name="lock-outline" size={20} color="#2563EB" />
+              <Text className="text-gray-700 ml-3 font-medium">Change Password</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="flex-row items-center p-3 border-t border-gray-200 active:bg-gray-50"
+            >
+              <MaterialIcons name="logout" size={20} color="#DC2626" />
+              <Text className="text-red-600 ml-3 font-medium">Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
-      
+
       {/* --------------------- CHANGE PASSWORD MODAL --------------------- */}
       <Modal visible={changePasswordModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
@@ -843,7 +832,7 @@ const Homepage = () => {
                     placeholder="Confirm new password"
                     className="border border-gray-300 rounded-lg p-3 text-gray-800 bg-gray-50 pr-10"
                   />
-                   <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3">
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3">
                     <Ionicons name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="gray" />
                   </TouchableOpacity>
                 </View>
@@ -860,7 +849,6 @@ const Homepage = () => {
           </View>
         </View>
       </Modal>
-
     </View>
   );
 };

@@ -26,7 +26,7 @@ const LoginScreen = () => {
     }
     
 
-      let response = await axios.post(`http://192.168.0.217:8080/auth/login`,dto);
+      let response = await axios.post(`http://192.168.0.111:8080/api/auth/login`,dto);
       console.log(response.data);
       await AsyncStorage.setItem("userToken",response.data)
       setAuthenticated(true);

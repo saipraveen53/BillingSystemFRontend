@@ -125,8 +125,8 @@ const Homepage = () => {
       setProducts(updatedProducts);
 
       const url = item.active
-        ? `http://192.168.0.110:8085/api/billing/${item.id}/deactivate`
-        : `http://192.168.0.110:8085/api/billing/${item.id}/activate`;
+        ? `http://192.168.0.111:8080/api/billing/${item.id}/deactivate`
+        : `http://192.168.0.111:8080/api/billing/${item.id}/activate`;
 
       await rootApi.patch(url);
     } catch (error) {
@@ -165,7 +165,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.put(
-        `http://192.168.0.110:8085/api/billing/product/${editData.id}`,
+        `http://192.168.0.111:8080/api/billing/product/${editData.id}`,
         dto
       );
 
@@ -200,7 +200,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.post(
-        `http://192.168.0.110:8085/api/billing/create/product`,
+        `http://192.168.0.111:8080/api/billing/create/product`,
         dto
       );
 
@@ -228,7 +228,7 @@ const Homepage = () => {
         active: newCategoryData.active,
       };
 
-      await rootApi.post(`http://192.168.0.110:8085/api/billing/category/create`, dto);
+      await rootApi.post(`http://192.168.0.111:8080/api/billing/category/create`, dto);
       setNewCategoryData(initialNewCategoryState);
       setAddCategoryModalVisible(false);
       Alert.alert("Success", "Category added successfully!");
@@ -314,7 +314,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.post(
-        `http://192.168.0.110:8085/api/auth/change-password`,
+        `http://192.168.0.111:8080/api/auth/change-password`,
         dto
       );
 
@@ -559,7 +559,7 @@ const Homepage = () => {
             key={numColumns}
             data={filteredProducts}
             numColumns={numColumns}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
             renderItem={renderProduct}
             contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isWeb ? 10 : 0 }}
             columnWrapperStyle={isWeb ? { justifyContent: 'flex-start' } : undefined}
@@ -621,6 +621,17 @@ const Homepage = () => {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text className="text-gray-400 font-bold mb-3 text-xs uppercase">Basic Information</Text>
+              
+              {/* --- NEW PRODUCT ID FIELD ADDED HERE --- */}
+              <ModernFormInput
+                label="Product ID (Optional)"
+                placeholder="Auto-generated if empty"
+                value={newProductData.id}
+                onChangeText={(t) => setNewProductData(prev => ({ ...prev, id: t }))}
+                keyboardType="numeric"
+                icon="key-outline"
+              />
+
               <View className="flex-row gap-3">
                 <ModernFormInput
                   label="Product Name"

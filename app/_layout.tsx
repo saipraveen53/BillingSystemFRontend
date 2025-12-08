@@ -14,6 +14,7 @@ export default function RootLayout() {
       <Stack.Screen  name="(auth)" options={{headerShown:false}}  />
       <Stack.Screen  name="(home)" options={{headerShown:false}}  /> 
       <Stack.Screen  name="(cashier)" options={{headerShown:false}}  /> 
+      <Stack.Screen name="+not-found"   options={{headerShown:false}} />
       </Stack>
 </BillingContext>
     

@@ -18,7 +18,6 @@ import {
 } from 'react-native';
 import { rootApi } from '../(utils)/axiosInstance';
 
-// Initial state for adding a new product
 const initialNewProductState = {
   id: '',
   name: '',
@@ -30,15 +29,6 @@ const initialNewProductState = {
   categoryId: '',
 };
 
-// Initial state for adding a new category
-const initialNewCategoryState = {
-  name: '',
-  defaultHsn: '',
-  defaultGst: '0',
-  active: true,
-};
-
-// Initial state for Change Password form
 const initialPasswordFormData = {
   oldPassword: '',
   newPassword: '',
@@ -59,18 +49,14 @@ const Homepage = () => {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
-  const [addCategoryModalVisible, setAddCategoryModalVisible] = useState(false);
   const [userMenuModalVisible, setUserMenuModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
 
-  // --- STATE FOR TOOLTIP ---
-  const [hoveredButton, setHoveredButton] = useState(null); // 'category' | 'product' | null
+  const [hoveredButton, setHoveredButton] = useState(null); 
 
   const [newProductData, setNewProductData] = useState(initialNewProductState);
-  const [newCategoryData, setNewCategoryData] = useState(initialNewCategoryState);
   const [passwordFormData, setPasswordFormData] = useState(initialPasswordFormData);
 
-  // --- NEW STATES FOR PASSWORD VISIBILITY ---
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -125,13 +111,15 @@ const Homepage = () => {
       setProducts(updatedProducts);
 
       const url = item.active
-        ? `http://192.168.0.111:8080/api/billing/${item.id}/deactivate`
-        : `http://192.168.0.111:8080/api/billing/${item.id}/activate`;
+        ? `/api/billing/${item.id}/deactivate`
+        : `/api/billing/${item.id}/activate`;
+
+      console.log("Toggling Status for ID:", item.id, "URL:", url);
 
       await rootApi.patch(url);
     } catch (error) {
       console.log('Toggle Error:', error);
-      Alert.alert("Error", "Status update failed");
+      Alert.alert("Error", "Status update failed. Reverting changes.");
       fetchProducts();
     }
   };
@@ -165,7 +153,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.put(
-        `http://192.168.0.111:8080/api/billing/product/${editData.id}`,
+        `http://192.168.0.217:8080/api/billing/product/${editData.id}`,
         dto
       );
 
@@ -200,7 +188,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.post(
-        `http://192.168.0.111:8080/api/billing/create/product`,
+        `http://192.168.0.217:8080/api/billing/create/product`,
         dto
       );
 
@@ -211,30 +199,6 @@ const Homepage = () => {
     } catch (error) {
       console.log("Add Product Error:", error);
       Alert.alert("Error", "Failed to add product. Check if the server is running and data is valid.");
-    }
-  };
-
-  const handleAddCategory = async () => {
-    try {
-      if (!newCategoryData.name) {
-        Alert.alert("Error", "Category name is required.");
-        return;
-      }
-
-      const dto = {
-        name: newCategoryData.name,
-        defaultHsn: newCategoryData.defaultHsn,
-        defaultGst: parseFloat(newCategoryData.defaultGst),
-        active: newCategoryData.active,
-      };
-
-      await rootApi.post(`http://192.168.0.111:8080/api/billing/category/create`, dto);
-      setNewCategoryData(initialNewCategoryState);
-      setAddCategoryModalVisible(false);
-      Alert.alert("Success", "Category added successfully!");
-    } catch (error) {
-      console.log("Add Category Error:", error);
-      Alert.alert("Error", "Failed to add category.");
     }
   };
 
@@ -314,7 +278,7 @@ const Homepage = () => {
       };
 
       let response = await rootApi.post(
-        `http://192.168.0.111:8080/api/auth/change-password`,
+        `http://192.168.0.217:8080/api/auth/change-password`,
         dto
       );
 
@@ -329,7 +293,6 @@ const Homepage = () => {
     }
   };
 
-  // --- MODERN FORM INPUT COMPONENT ---
   const ModernFormInput = useCallback(({ label, value, onChangeText, keyboardType = 'default', isDropdown = false, icon, placeholder }) => (
     <View className="mb-4 flex-1">
       <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">
@@ -454,7 +417,6 @@ const Homepage = () => {
     <View className="flex-1 bg-gray-100">
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
 
-      {/* --- REDESIGNED COMPACT HEADER --- */}
       <View className="bg-blue-900 pt-10 pb-4 px-4 rounded-b-3xl shadow-lg z-10">
         <View className="flex-row justify-between items-center mb-3">
           <View>
@@ -488,9 +450,7 @@ const Homepage = () => {
         </View>
       </View>
 
-      {/* --- ACTION BAR: Filters (Left) & Add Buttons (Right) --- */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100 z-0">
-        {/* Left: Category Chips */}
         <View className="flex-1 mr-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {categories.map((cat, index) => (
@@ -513,26 +473,7 @@ const Homepage = () => {
           </ScrollView>
         </View>
 
-        {/* Right: Add Buttons with Tooltip/Hover Effect */}
         <View className="flex-row gap-2 relative z-50">
-          {/* Add Category Button */}
-          <View>
-            <TouchableOpacity
-              onPress={() => setAddCategoryModalVisible(true)}
-              onMouseEnter={() => setHoveredButton('category')}
-              onMouseLeave={() => setHoveredButton(null)}
-              className="bg-purple-600 w-10 h-10 rounded-full items-center justify-center shadow-md relative"
-            >
-              <MaterialIcons name="category" size={20} color="white" />
-            </TouchableOpacity>
-            {hoveredButton === 'category' && (
-              <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
-                <Text className="text-white text-xs font-bold">Add Category</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Add Product Button */}
           <View>
             <TouchableOpacity
               onPress={() => setAddProductModalVisible(true)}
@@ -573,7 +514,6 @@ const Homepage = () => {
         )}
       </View>
 
-      {/* --------------------- EDIT MODAL (MODERNIZED) --------------------- */}
       <Modal visible={editModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4 backdrop-blur-sm">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90%] border border-gray-100">
@@ -608,7 +548,6 @@ const Homepage = () => {
         </View>
       </Modal>
 
-      {/* --------------------- ADD PRODUCT MODAL (MODERNIZED) --------------------- */}
       <Modal visible={addProductModalVisible} animationType="fade" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-8 shadow-2xl max-h-[90%] border border-gray-100">
@@ -622,7 +561,6 @@ const Homepage = () => {
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text className="text-gray-400 font-bold mb-3 text-xs uppercase">Basic Information</Text>
               
-              {/* --- NEW PRODUCT ID FIELD ADDED HERE --- */}
               <ModernFormInput
                 label="Product ID (Optional)"
                 placeholder="Auto-generated if empty"
@@ -706,71 +644,6 @@ const Homepage = () => {
         </View>
       </Modal>
 
-      {/* --------------------- ADD CATEGORY MODAL (MODERNIZED) --------------------- */}
-      <Modal visible={addCategoryModalVisible} animationType="fade" transparent>
-        <View className="flex-1 bg-black/60 justify-center items-center p-4">
-          <View className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl border border-gray-100">
-            <View className="items-center mb-6">
-              <View className="bg-purple-100 w-16 h-16 rounded-full items-center justify-center mb-3">
-                <MaterialIcons name="category" size={32} color="purple" />
-              </View>
-              <Text className="text-2xl font-bold text-gray-800">New Category</Text>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <ModernFormInput
-                label="Category Name"
-                placeholder="Ex: Dairy, Electronics"
-                value={newCategoryData.name}
-                onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, name: t }))}
-                icon="text"
-              />
-
-              <View className="flex-row gap-3">
-                <ModernFormInput
-                  label="Default HSN"
-                  placeholder="Optional"
-                  value={newCategoryData.defaultHsn}
-                  onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultHsn: t }))}
-                  icon="document-text-outline"
-                />
-                <ModernFormInput
-                  label="Default GST %"
-                  placeholder="0"
-                  value={newCategoryData.defaultGst}
-                  onChangeText={(t) => setNewCategoryData(prev => ({ ...prev, defaultGst: t }))}
-                  keyboardType="numeric"
-                  icon="pie-chart-outline"
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wider">Status</Text>
-                <TouchableOpacity
-                  onPress={() => setNewCategoryData(prev => ({ ...prev, active: !prev.active }))}
-                  className={`flex-row items-center justify-between p-4 rounded-xl border ${newCategoryData.active ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
-                >
-                  <Text className={`font-bold ${newCategoryData.active ? 'text-green-700' : 'text-red-700'}`}>
-                    {newCategoryData.active ? 'Active Category' : 'Inactive Category'}
-                  </Text>
-                  <FontAwesome5 name={newCategoryData.active ? "check-circle" : "ban"} size={20} color={newCategoryData.active ? "green" : "red"} />
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-
-            <View className="mt-6 flex-row gap-3">
-              <TouchableOpacity onPress={() => { setAddCategoryModalVisible(false); setNewCategoryData(initialNewCategoryState); }} className="flex-1 bg-gray-100 py-4 rounded-xl">
-                <Text className="text-gray-600 text-center font-bold text-lg">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleAddCategory} className="flex-1 bg-purple-600 py-4 rounded-xl shadow-md">
-                <Text className="text-white text-center font-bold text-lg">Add Category</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* --------------------- USER MENU MODAL --------------------- */}
       <Modal visible={userMenuModalVisible} animationType="fade" transparent>
         <TouchableOpacity
           className="flex-1 bg-black/30 items-end justify-start pt-10"
@@ -797,7 +670,6 @@ const Homepage = () => {
         </TouchableOpacity>
       </Modal>
 
-      {/* --------------------- CHANGE PASSWORD MODAL --------------------- */}
       <Modal visible={changePasswordModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
           <View className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">

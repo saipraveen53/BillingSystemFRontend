@@ -1,4 +1,4 @@
-import { Feather, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,11 +13,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import { rootApi } from '../(utils)/axiosInstance';
 
-// --- REUSABLE MODERN INPUT COMPONENT (Moved Outside to fix Focus Issue) ---
+// --- REUSABLE MODERN INPUT COMPONENT (Outside to fix focus issue) ---
 const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default', secureTextEntry = false, icon, placeholder }) => (
   <View className="mb-4 flex-1">
     <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">
@@ -44,11 +45,22 @@ const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default',
 );
 
 const Cashiers = () => {
+  const { width } = useWindowDimensions();
+  const isWeb = width > 900;
+  // Grid Layout: 3 columns for web, 1 for mobile
+  const numColumns = isWeb ? 3 : 1;
+
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [dataLoading, setDataLoading] = useState(true); // Loading state for fetching list
-  const [cashiers, setCashiers] = useState([]); // State to store cashier list
+  const [dataLoading, setDataLoading] = useState(true);
+  const [cashiers, setCashiers] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Tooltip State
+  const [hoveredButton, setHoveredButton] = useState(null);
 
   // Form States
   const [name, setName] = useState("");
@@ -64,13 +76,11 @@ const Cashiers = () => {
   const fetchCashiers = async () => {
     try {
       setDataLoading(true);
-      // Endpoint provided by you
       const response = await rootApi.get("api/user/allCashiers");
       console.log("Fetched Cashiers:", response.data);
       setCashiers(response.data);
     } catch (error) {
       console.log("Fetch Error:", error);
-      // Optional: Alert.alert("Error", "Failed to fetch cashiers list.");
     } finally {
       setDataLoading(false);
       setRefreshing(false);
@@ -81,6 +91,16 @@ const Cashiers = () => {
     setRefreshing(true);
     fetchCashiers();
   };
+
+  // Filter Logic
+  const filteredCashiers = cashiers.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (item.name && item.name.toLowerCase().includes(query)) ||
+      (item.email && item.email.toLowerCase().includes(query)) ||
+      (item.phone && item.phone.includes(query))
+    );
+  });
 
   const handleAddCashier = async () => {
     if (!name || !email || !phone || !password) {
@@ -123,40 +143,42 @@ const Cashiers = () => {
     }
   };
 
-  // --- CASHIER CARD RENDER ---
+  // --- CASHIER ID CARD RENDER ---
   const renderCashierItem = ({ item }) => (
-    <View className="bg-white rounded-2xl p-4 mb-3 mx-1 shadow-sm border border-gray-100 flex-row items-center">
-      {/* Avatar / Initial */}
-      <View className="h-14 w-14 rounded-full bg-blue-50 items-center justify-center border border-blue-100 mr-4">
-        <Text className="text-blue-600 text-xl font-bold">
+    <View
+      style={{
+        flex: 1,
+        margin: 8,
+        maxWidth: isWeb ? `${(100 / numColumns) - 2}%` : '100%',
+        minWidth: isWeb ? '30%' : '100%',
+      }}
+      className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 items-center relative"
+    >
+      {/* Active Status - Top Right */}
+      <View className="absolute top-4 right-4 bg-green-100 px-2 py-1 rounded-md">
+        <Text className="text-green-700 text-[10px] font-bold uppercase">Active</Text>
+      </View>
+
+      {/* Avatar / Initial - Centered & Large */}
+      <View className="h-24 w-24 rounded-full bg-blue-50 items-center justify-center border-4 border-blue-100 mb-4 mt-2 shadow-inner">
+        <Text className="text-blue-600 text-4xl font-bold">
           {item.name ? item.name.charAt(0).toUpperCase() : "U"}
         </Text>
       </View>
 
-      {/* Details */}
-      <View className="flex-1">
-        <Text className="text-lg font-bold text-gray-800 mb-1">{item.name}</Text>
+      {/* Details - Centered */}
+      <Text className="text-xl font-bold text-gray-800 mb-1 text-center" numberOfLines={1}>
+        {item.name}
+      </Text>
 
-        <View className="flex-row items-center mb-1">
-          <MaterialIcons name="email" size={14} color="#6B7280" />
-          <Text className="text-gray-500 text-xs ml-1.5">{item.email}</Text>
-        </View>
-
-        <View className="flex-row items-center">
-          <MaterialIcons name="phone" size={14} color="#6B7280" />
-          <Text className="text-gray-500 text-xs ml-1.5">{item.phone}</Text>
-        </View>
+      <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
+        <MaterialIcons name="email" size={14} color="#6B7280" />
+        <Text className="text-gray-500 text-xs ml-2 font-medium">{item.email}</Text>
       </View>
 
-      {/* Status / Action Placeholder (Optional) */}
-      <View className="items-end">
-        <View className="bg-green-100 px-2 py-1 rounded-md mb-2">
-          <Text className="text-green-700 text-[10px] font-bold uppercase">Active</Text>
-        </View>
-        {/* You can add Edit/Delete buttons here later */}
-        <TouchableOpacity className="p-1">
-          <Feather name="more-horizontal" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
+      <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
+        <MaterialIcons name="phone" size={14} color="#6B7280" />
+        <Text className="text-gray-500 text-xs ml-2 font-medium">{item.phone}</Text>
       </View>
     </View>
   );
@@ -166,46 +188,65 @@ const Cashiers = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
 
       {/* --- HEADER --- */}
-      <View className="bg-blue-900 pt-12 pb-8 px-6 rounded-b-[30px] shadow-lg z-10">
-        <View className="flex-row justify-between items-center">
+      <View className="bg-blue-900 pt-10 pb-4 px-4 rounded-b-3xl shadow-lg z-10">
+        <View className="flex-row justify-between items-center mb-3">
           <View>
-            <Text className="text-white text-3xl font-bold tracking-wide">Staff Management</Text>
-            <Text className="text-blue-200 text-sm mt-1">Manage your cashiers and permissions</Text>
+            <Text className="text-white text-xl font-bold tracking-wide">Staff Management</Text>
+            <Text className="text-blue-200 text-xs mt-1">Total Cashiers: {cashiers.length}</Text>
           </View>
-          <View className="bg-blue-800 p-3 rounded-full border border-blue-700">
-            <FontAwesome5 name="users" size={24} color="white" />
+          
+          {/* ADD BUTTON WITH TOOLTIP */}
+          <View className="relative z-50">
+            <TouchableOpacity
+              onPress={() => setModalVisible(true)}
+              onMouseEnter={() => setHoveredButton('add')}
+              onMouseLeave={() => setHoveredButton(null)}
+              className="bg-blue-800 p-2 rounded-full border border-blue-700"
+            >
+              <Ionicons name="person-add" size={20} color="white" />
+            </TouchableOpacity>
+            
+            {/* CHANGED: Tooltip Position fixed (Left side: right-12) to avoid overlapping search bar */}
+            {hoveredButton === 'add' && (
+              <View className="absolute top-2 right-12 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
+                <Text className="text-white text-xs font-bold">Add Cashier</Text>
+              </View>
+            )}
           </View>
+        </View>
+
+        {/* Search Bar */}
+        <View className="flex-row items-center bg-white rounded-full px-3 h-10 shadow-sm">
+          <Ionicons name="search" size={18} color="#9CA3AF" />
+          <TextInput
+            placeholder="Search Cashiers..."
+            className="flex-1 ml-2 text-base text-gray-800 h-full"
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={Platform.OS === 'web' ? { outline: 'none' } : undefined}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* --- MAIN CONTENT --- */}
-      <View className="flex-1 px-4 mt-4">
-        {/* Add Cashier Card */}
-        <View className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 items-center justify-between flex-row mb-6">
-          <View className="flex-1 mr-4">
-            <Text className="text-lg font-bold text-gray-800">Add New Cashier</Text>
-            <Text className="text-gray-500 text-xs mt-1">Register a new staff member to handle billing.</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => setModalVisible(true)}
-            className="bg-blue-600 px-5 py-3 rounded-xl shadow-lg flex-row items-center"
-          >
-            <Ionicons name="person-add" size={18} color="white" />
-            <Text className="text-white font-bold ml-2">Add</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* --- CASHIERS LIST --- */}
-        <Text className="text-gray-500 font-bold uppercase text-xs mb-3 ml-1 tracking-wider">Registered Cashiers ({cashiers.length})</Text>
-
+      <View className="flex-1 px-2 mt-4">
         {dataLoading ? (
           <ActivityIndicator size="large" color="#1E3A8A" className="mt-10" />
         ) : (
           <FlatList
-            data={cashiers}
+            key={numColumns}
+            data={filteredCashiers}
             keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
             renderItem={renderCashierItem}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            numColumns={numColumns}
+            contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isWeb ? 10 : 0 }}
+            columnWrapperStyle={isWeb ? { justifyContent: 'flex-start' } : undefined}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1E3A8A"]} />

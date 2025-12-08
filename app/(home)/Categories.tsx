@@ -53,11 +53,18 @@ const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default',
 const Categories = () => {
   const { width } = useWindowDimensions();
   const isWeb = width > 900;
-  const numColumns = isWeb ? 2 : 1;
+  // CHANGED: numColumns to 3 for web to match Homepage
+  const numColumns = isWeb ? 3 : 1; 
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // CHANGED: Added Search Query State
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // CHANGED: Added Hover State for Tooltip
+  const [hoveredButton, setHoveredButton] = useState(null);
 
   // --- ADD CATEGORY STATES ---
   const [addCategoryModalVisible, setAddCategoryModalVisible] = useState(false);
@@ -93,6 +100,16 @@ const Categories = () => {
     setRefreshing(true);
     fetchCategories();
   }, []);
+
+  // CHANGED: Filter Logic based on Search Query
+  const filteredCategories = categories.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      (item.id && item.id.toString().includes(query)) ||
+      (item.defaultHsn && item.defaultHsn.includes(query))
+    );
+  });
 
   // ---------------------------------------------
   //           ADD CATEGORY LOGIC
@@ -175,8 +192,14 @@ const Categories = () => {
 
   const renderCategoryItem = ({ item }) => (
     <View 
-      className="bg-white rounded-2xl p-4 mb-3 mx-2 shadow-sm border border-gray-100 flex-1"
-      style={isWeb ? { maxWidth: '48%' } : {}}
+      className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 overflow-hidden"
+      // CHANGED: Style to match Homepage 3-column layout
+      style={{
+        flex: 1,
+        margin: 8,
+        maxWidth: isWeb ? `${(100 / numColumns) - 2}%` : '100%',
+        minWidth: isWeb ? '30%' : '100%',
+      }}
     >
       <View className="flex-row justify-between items-start mb-3">
         <View className="flex-row items-center flex-1">
@@ -217,7 +240,7 @@ const Categories = () => {
 
       <View className={`mt-2 py-1 px-3 rounded-lg self-start ${item.active ? 'bg-green-100' : 'bg-red-100'}`}>
          <Text className={`text-[10px] font-bold uppercase ${item.active ? 'text-green-700' : 'text-red-700'}`}>
-            {item.active ? 'Active' : 'Inactive'}
+           {item.active ? 'Active' : 'Inactive'}
          </Text>
       </View>
     </View>
@@ -228,22 +251,51 @@ const Categories = () => {
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
 
       {/* --- HEADER --- */}
-      <View className="bg-blue-900 pt-12 pb-6 px-6 rounded-b-[30px] shadow-xl mb-4 z-10">
-        <View className="flex-row justify-between items-center">
+      <View className="bg-blue-900 pt-10 pb-4 px-4 rounded-b-3xl shadow-lg z-10">
+        <View className="flex-row justify-between items-center mb-3">
           <View>
-            <Text className="text-white text-3xl font-bold tracking-wide">Categories</Text>
-            <Text className="text-blue-200 text-sm mt-1">
+            <Text className="text-white text-xl font-bold tracking-wide">Categories</Text>
+            <Text className="text-blue-200 text-xs mt-1">
               Total Categories: {categories.length}
             </Text>
           </View>
           
-          {/* --- ADD BUTTON IN HEADER --- */}
-          <TouchableOpacity 
-            onPress={() => setAddCategoryModalVisible(true)}
-            className="bg-white p-3 rounded-full shadow-lg flex-row items-center"
-          >
-            <Ionicons name="add" size={24} color="#1E3A8A" />
-          </TouchableOpacity>
+          {/* --- ADD BUTTON IN HEADER WITH TOOLTIP --- */}
+          <View className="relative z-50">
+            <TouchableOpacity 
+              onPress={() => setAddCategoryModalVisible(true)}
+              onMouseEnter={() => setHoveredButton('add')}
+              onMouseLeave={() => setHoveredButton(null)}
+              className="bg-white p-3 rounded-full shadow-lg flex-row items-center"
+            >
+              <Ionicons name="add" size={24} color="#1E3A8A" />
+            </TouchableOpacity>
+            
+            {/* CHANGED: Tooltip Position fixed (Left side) to avoid overlapping search bar */}
+            {hoveredButton === 'add' && (
+              <View className="absolute top-2 right-14 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
+                <Text className="text-white text-xs font-bold">Add Category</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* CHANGED: Search Bar Added */}
+        <View className="flex-row items-center bg-white rounded-full px-3 h-10 shadow-sm">
+          <Ionicons name="search" size={18} color="#9CA3AF" />
+          <TextInput
+            placeholder="Search Categories..."
+            className="flex-1 ml-2 text-base text-gray-800 h-full"
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={Platform.OS === 'web' ? { outline: 'none' } : undefined}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -253,12 +305,12 @@ const Categories = () => {
           <ActivityIndicator size="large" color="#1E3A8A" className="mt-10" />
         ) : (
           <FlatList
-            key={isWeb ? 'web' : 'mobile'}
-            data={categories}
+            key={numColumns} // CHANGED: Key changes with columns to force re-render
+            data={filteredCategories} // CHANGED: Using filtered list
             keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
             renderItem={renderCategoryItem}
             numColumns={numColumns}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isWeb ? 10 : 0 }}
             showsVerticalScrollIndicator={false}
             columnWrapperStyle={isWeb ? { justifyContent: 'flex-start' } : undefined}
             refreshControl={

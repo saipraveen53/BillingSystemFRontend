@@ -51,6 +51,7 @@ const Homepage = () => {
   const [addProductModalVisible, setAddProductModalVisible] = useState(false);
   const [userMenuModalVisible, setUserMenuModalVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+  const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false); 
 
   const [hoveredButton, setHoveredButton] = useState(null); 
 
@@ -450,27 +451,19 @@ const Homepage = () => {
         </View>
       </View>
 
+      {/* --- REPLACED SCROLLVIEW WITH DROPDOWN TRIGGER --- */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100 z-0">
-        <View className="flex-1 mr-4">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {categories.map((cat, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full mr-2 border ${
-                  selectedCategory === cat
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'bg-white border-gray-300'
-                }`}
-              >
-                <Text className={`text-xs font-bold ${
-                  selectedCategory === cat ? 'text-white' : 'text-gray-600'
-                }`}>
-                  {cat === 'All' ? 'All Items' : `Cat: ${cat}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        {/* CHANGED: Removed flex-1, added w-64 to fix stretching */}
+        <View className="w-64 mr-4">
+          <TouchableOpacity
+            onPress={() => setCategoryDropdownVisible(true)}
+            className="flex-row items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-200"
+          >
+            <Text className="text-gray-700 font-bold">
+              {selectedCategory === 'All' ? 'All Items' : `Category: ${selectedCategory}`}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#6B7280" />
+          </TouchableOpacity>
         </View>
 
         <View className="flex-row gap-2 relative z-50">
@@ -483,8 +476,9 @@ const Homepage = () => {
             >
               <Ionicons name="add" size={24} color="white" />
             </TouchableOpacity>
+            {/* CHANGED: Position moved to left (right-12) to avoid scrollbar clipping */}
             {hoveredButton === 'product' && (
-              <View className="absolute -bottom-8 right-0 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
+              <View className="absolute top-2 right-12 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
                 <Text className="text-white text-xs font-bold">Add Product</Text>
               </View>
             )}
@@ -514,6 +508,7 @@ const Homepage = () => {
         )}
       </View>
 
+      {/* --- EDIT MODAL --- */}
       <Modal visible={editModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4 backdrop-blur-sm">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90%] border border-gray-100">
@@ -548,6 +543,7 @@ const Homepage = () => {
         </View>
       </Modal>
 
+      {/* --- ADD PRODUCT MODAL --- */}
       <Modal visible={addProductModalVisible} animationType="fade" transparent>
         <View className="flex-1 bg-black/60 justify-center items-center p-4">
           <View className="bg-white w-full max-w-2xl rounded-3xl p-8 shadow-2xl max-h-[90%] border border-gray-100">
@@ -631,11 +627,7 @@ const Homepage = () => {
               <TouchableOpacity onPress={() => { setAddProductModalVisible(false); setNewProductData(initialNewProductState); }} className="flex-1 bg-gray-100 py-4 rounded-xl">
                 <Text className="text-gray-600 text-center font-bold text-lg">Cancel</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity onPress={handlePrintPayload} className="w-14 bg-yellow-100 rounded-xl items-center justify-center">
-                <Feather name="code" size={20} color="#D97706" />
-              </TouchableOpacity>
-
+              
               <TouchableOpacity onPress={handleAddProduct} className="flex-1 bg-green-600 py-4 rounded-xl shadow-md">
                 <Text className="text-white text-center font-bold text-lg">Save Product</Text>
               </TouchableOpacity>
@@ -644,6 +636,7 @@ const Homepage = () => {
         </View>
       </Modal>
 
+      {/* --- USER MENU MODAL --- */}
       <Modal visible={userMenuModalVisible} animationType="fade" transparent>
         <TouchableOpacity
           className="flex-1 bg-black/30 items-end justify-start pt-10"
@@ -670,6 +663,7 @@ const Homepage = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* --- CHANGE PASSWORD MODAL --- */}
       <Modal visible={changePasswordModalVisible} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-center items-center p-4">
           <View className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
@@ -732,6 +726,42 @@ const Homepage = () => {
           </View>
         </View>
       </Modal>
+
+      {/* --- NEW CATEGORY DROPDOWN MODAL --- */}
+      <Modal visible={categoryDropdownVisible} transparent animationType="fade">
+        <TouchableOpacity
+          className="flex-1 bg-black/50 justify-center items-center p-4"
+          activeOpacity={1}
+          onPress={() => setCategoryDropdownVisible(false)}
+        >
+          <View className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl">
+            <View className="p-4 border-b border-gray-100 flex-row justify-between items-center bg-gray-50">
+              <Text className="font-bold text-lg text-gray-800">Select Category</Text>
+              <TouchableOpacity onPress={() => setCategoryDropdownVisible(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {categories.map((cat, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => {
+                    setSelectedCategory(cat);
+                    setCategoryDropdownVisible(false);
+                  }}
+                  className={`p-4 border-b border-gray-100 flex-row justify-between items-center ${selectedCategory === cat ? 'bg-blue-50' : ''}`}
+                >
+                  <Text className={`text-base ${selectedCategory === cat ? 'text-blue-600 font-bold' : 'text-gray-700'}`}>
+                    {cat === 'All' ? 'All Items' : `Category: ${cat}`}
+                  </Text>
+                  {selectedCategory === cat && <Ionicons name="checkmark" size={20} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </View>
   );
 };

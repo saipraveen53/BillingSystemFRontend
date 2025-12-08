@@ -112,8 +112,8 @@ const Homepage = () => {
       setProducts(updatedProducts);
 
       const url = item.active
-        ? `/api/billing/${item.id}/deactivate`
-        : `/api/billing/${item.id}/activate`;
+        ? `/api/billing/status/${item.id}?status=${false}`
+        : `/api/billing/status/${item.id}?status=${true}`;
 
       console.log("Toggling Status for ID:", item.id, "URL:", url);
 

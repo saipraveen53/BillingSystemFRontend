@@ -58,7 +58,6 @@ const Cashiers = () => {
   
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
-
   // Tooltip State
   const [hoveredButton, setHoveredButton] = useState(null);
 
@@ -68,7 +67,7 @@ const Cashiers = () => {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  // --- FETCH CASHIERS ---
+  // --- 1. FETCH CASHIERS ---
   useEffect(() => {
     fetchCashiers();
   }, []);
@@ -77,7 +76,7 @@ const Cashiers = () => {
     try {
       setDataLoading(true);
       const response = await rootApi.get("api/user/allCashiers");
-      console.log("Fetched Cashiers:", response.data);
+      console.log("Fetched Cashiers Data:", response.data);
       setCashiers(response.data);
     } catch (error) {
       console.log("Fetch Error:", error);
@@ -92,7 +91,32 @@ const Cashiers = () => {
     fetchCashiers();
   };
 
-  // Filter Logic
+  // --- 2. TOGGLE STATUS LOGIC (FIXED) ---
+  const toggleCashierStatus = async (item) => {
+    // FIX: Check both 'active' and 'isActive' properties
+    const currentStatus = item.active === true || item.isActive === true;
+    const newStatus = !currentStatus;
+
+    // Optimistic Update
+    const updatedCashiers = cashiers.map((c) =>
+      c.id === item.id ? { ...c, active: newStatus, isActive: newStatus } : c
+    );
+    setCashiers(updatedCashiers);
+
+    try {
+      console.log(`Updating Cashier ID: ${item.id} from ${currentStatus} to ${newStatus}`);
+      
+      await rootApi.put(`/api/user/statusUpdate/${item.id}?status=${newStatus}`);
+      
+      console.log("Status Updated Successfully on Server");
+    } catch (error) {
+      console.error("Status Update Error:", error);
+      Alert.alert("Error", "Failed to update status. Reverting changes.");
+      fetchCashiers();
+    }
+  };
+
+  // --- Filter Logic ---
   const filteredCashiers = cashiers.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -132,7 +156,6 @@ const Cashiers = () => {
       setPassword("");
       setModalVisible(false);
 
-      // Refresh the list after adding
       fetchCashiers();
 
     } catch (error) {
@@ -143,45 +166,59 @@ const Cashiers = () => {
     }
   };
 
-  // --- CASHIER ID CARD RENDER ---
-  const renderCashierItem = ({ item }) => (
-    <View
-      style={{
-        flex: 1,
-        margin: 8,
-        maxWidth: isWeb ? `${(100 / numColumns) - 2}%` : '100%',
-        minWidth: isWeb ? '30%' : '100%',
-      }}
-      className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 items-center relative"
-    >
-      {/* Active Status - Top Right */}
-      <View className="absolute top-4 right-4 bg-green-100 px-2 py-1 rounded-md">
-        <Text className="text-green-700 text-[10px] font-bold uppercase">Active</Text>
-      </View>
+  // --- CASHIER CARD RENDER (ID CARD STYLE) ---
+  const renderCashierItem = ({ item }) => {
+    // FIX: Check both properties to ensure UI updates correctly
+    const isActive = item.active === true || item.isActive === true;
 
-      {/* Avatar / Initial - Centered & Large */}
-      <View className="h-24 w-24 rounded-full bg-blue-50 items-center justify-center border-4 border-blue-100 mb-4 mt-2 shadow-inner">
-        <Text className="text-blue-600 text-4xl font-bold">
-          {item.name ? item.name.charAt(0).toUpperCase() : "U"}
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => toggleCashierStatus(item)}
+        style={{
+            flex: 1,
+            margin: 8,
+            maxWidth: isWeb ? `${(100 / numColumns) - 2}%` : '100%',
+            minWidth: isWeb ? '30%' : '100%',
+        }}
+        className={`bg-white rounded-3xl p-6 shadow-sm border items-center relative ${isActive ? 'border-gray-100' : 'border-red-100 bg-red-50/10'}`}
+      >
+        {/* Active Status - Top Right */}
+        <View className={`absolute top-4 right-4 px-2 py-1 rounded-md ${isActive ? 'bg-green-100' : 'bg-red-100'}`}>
+          <Text className={`text-[10px] font-bold uppercase ${isActive ? 'text-green-700' : 'text-red-700'}`}>
+            {isActive ? 'Active' : 'Inactive'}
+          </Text>
+        </View>
+
+        {/* Removed 3 dots from Left side as requested */}
+
+        {/* Avatar / Initial - Centered & Large */}
+        <View className={`h-24 w-24 rounded-full items-center justify-center border-4 mb-4 mt-2 shadow-inner ${isActive ? 'bg-blue-50 border-blue-100' : 'bg-gray-100 border-gray-200'}`}>
+          <Text className={`text-4xl font-bold ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+            {item.name ? item.name.charAt(0).toUpperCase() : "U"}
+          </Text>
+        </View>
+
+        {/* Details - Centered */}
+        <Text className={`text-xl font-bold mb-1 text-center ${isActive ? 'text-gray-800' : 'text-gray-500'}`} numberOfLines={1}>
+          {item.name}
         </Text>
-      </View>
 
-      {/* Details - Centered */}
-      <Text className="text-xl font-bold text-gray-800 mb-1 text-center" numberOfLines={1}>
-        {item.name}
-      </Text>
+        <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
+          <MaterialIcons name="email" size={14} color={isActive ? "#6B7280" : "#9CA3AF"} />
+          <Text className={`text-xs ml-2 font-medium ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>{item.email}</Text>
+        </View>
 
-      <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
-        <MaterialIcons name="email" size={14} color="#6B7280" />
-        <Text className="text-gray-500 text-xs ml-2 font-medium">{item.email}</Text>
-      </View>
-
-      <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
-        <MaterialIcons name="phone" size={14} color="#6B7280" />
-        <Text className="text-gray-500 text-xs ml-2 font-medium">{item.phone}</Text>
-      </View>
-    </View>
-  );
+        <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
+          <MaterialIcons name="phone" size={14} color={isActive ? "#6B7280" : "#9CA3AF"} />
+          <Text className={`text-xs ml-2 font-medium ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>{item.phone}</Text>
+        </View>
+        
+        {/* Status Hint */}
+        <Text className="text-[10px] text-gray-300 mt-4">Tap to Toggle Status</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View className="flex-1 bg-gray-100">
@@ -195,7 +232,7 @@ const Cashiers = () => {
             <Text className="text-blue-200 text-xs mt-1">Total Cashiers: {cashiers.length}</Text>
           </View>
           
-          {/* ADD BUTTON WITH TOOLTIP */}
+          {/* Add Button with Tooltip */}
           <View className="relative z-50">
             <TouchableOpacity
               onPress={() => setModalVisible(true)}
@@ -206,7 +243,7 @@ const Cashiers = () => {
               <Ionicons name="person-add" size={20} color="white" />
             </TouchableOpacity>
             
-            {/* CHANGED: Tooltip Position fixed (Left side: right-12) to avoid overlapping search bar */}
+            {/* Tooltip positioned to the LEFT (right-12) */}
             {hoveredButton === 'add' && (
               <View className="absolute top-2 right-12 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
                 <Text className="text-white text-xs font-bold">Add Cashier</Text>

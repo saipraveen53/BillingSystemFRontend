@@ -6,7 +6,7 @@ const Categories = () => {
 
     useEffect(()=>{
         let fetchCategories =async()=>{
-            let response = await rootApi.get(`api/billing/categories/all`);
+            let response = await rootApi.get(`api/billing/category/all`);
             console.log(response.data)
         }
         fetchCategories();

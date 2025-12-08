@@ -39,7 +39,7 @@ const Cashiers = () => {
     try {
       setDataLoading(true);
       // Endpoint provided by you
-      const response = await rootApi.get("api/allCashiers");
+      const response = await rootApi.get("api/user/allCashiers");
       console.log("Fetched Cashiers:", response.data);
       setCashiers(response.data);
     } catch (error) {

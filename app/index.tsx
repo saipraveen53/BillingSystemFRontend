@@ -110,21 +110,32 @@ const LoginScreen = () => {
       return;
     }
 
-    // Backend Logic Placeholder
-    // Since the API endpoint for resetting password isn't provided in the context,
-    // I'm adding the UI logic here. You can connect your `axios.post` here.
-    
-    console.log("Resetting Password...", { email: forgotEmail, otp: otpCode, newPass: newPassword });
-    
-    Alert.alert("Success", "Password reset successfully!");
-    
-    // Reset States and Close Modal
-    setForgotPasswordModalVisible(false);
-    setIsOtpSent(false);
-    setForgotEmail('');
-    setOtpCode('');
-    setNewPassword('');
-    setConfirmPassword('');
+    const resetDto = {
+        email: forgotEmail,
+        otp: otpCode,
+        newPassword: newPassword
+    };
+
+    try {
+        // Updated API call as requested
+        const response = await axios.post(`http://192.168.0.217:8080/api/auth/reset-password`, resetDto);
+        console.log("Reset Password Response:", response.data);
+        
+        Alert.alert("Success", "Password reset successfully! Please login with new password.");
+        
+        // Reset States and Close Modal
+        setForgotPasswordModalVisible(false);
+        setIsOtpSent(false);
+        setForgotEmail('');
+        setOtpCode('');
+        setNewPassword('');
+        setConfirmPassword('');
+
+    } catch (error) {
+        console.log("Reset Password Error:", error);
+        const errorMessage = error.response?.data?.message || "Failed to reset password. Please check OTP or try again.";
+        Alert.alert("Error", errorMessage);
+    }
   };
 
   const handleCloseModal = () => {

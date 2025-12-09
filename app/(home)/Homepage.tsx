@@ -81,6 +81,9 @@ const Homepage = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Custom Dropdown State
+  const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
 
   const [editData, setEditData] = useState({
     id: '',
@@ -102,7 +105,9 @@ const Homepage = () => {
     try {
       setLoading(true);
       let response = await rootApi.get(`api/billing/all`);
-      setProducts(response.data);
+      // SORT BY ID ASCENDING
+      const sortedProducts = response.data.sort((a, b) => a.id - b.id);
+      setProducts(sortedProducts);
     } catch (error) {
       console.log('Fetch Error:', error);
     } finally {
@@ -126,6 +131,7 @@ const Homepage = () => {
 
   const toggleProductStatus = async (item) => {
     try {
+      // Optimistic update
       const updatedProducts = products.map((p) =>
         p.id === item.id ? { ...p, active: !p.active } : p
       );
@@ -151,7 +157,7 @@ const Homepage = () => {
       name: item.name,
       barcode: item.barcode,
       price: item.price + '',
-      discountType: item.discountType,
+      discountType: item.discountType || 'PERCENTAGE',
       discountValue: item.discountValue + '',
       stockQty: item.stockQty + '',
       categoryId: item.categoryId + '',
@@ -178,9 +184,11 @@ const Homepage = () => {
         dto
       );
 
+      // --- BUG FIX HERE: Ensure ID comparison uses toString() to match types ---
       setProducts((prev) =>
-        prev.map((p) => (p.id === editData.id ? response.data : p))
+        prev.map((p) => (p.id.toString() === editData.id.toString() ? response.data : p)).sort((a, b) => a.id - b.id)
       );
+      
       setEditModalVisible(false);
       Alert.alert("Success", "Product details updated!");
     } catch (error) {
@@ -213,7 +221,8 @@ const Homepage = () => {
         dto
       );
 
-      setProducts((prev) => [response.data, ...prev]);
+      setProducts((prev) => [...prev, response.data].sort((a, b) => a.id - b.id));
+      
       setNewProductData(initialNewProductState);
       setAddProductModalVisible(false);
       Alert.alert("Success", "New product added successfully!");
@@ -221,25 +230,6 @@ const Homepage = () => {
       console.log("Add Product Error:", error);
       Alert.alert("Error", "Failed to add product. Check if the server is running and data is valid.");
     }
-  };
-
-  const handlePrintPayload = () => {
-    const payloadToPrint = {
-      id: newProductData.id || null,
-      name: newProductData.name,
-      barcode: newProductData.barcode,
-      price: parseFloat(newProductData.price) || 0,
-      discountType: newProductData.discountType,
-      discountValue: parseFloat(newProductData.discountValue) || 0,
-      stockQty: parseInt(newProductData.stockQty) || 0,
-      categoryId: parseInt(newProductData.categoryId) || 0,
-      active: true,
-    };
-
-    console.log("--- DEBUG: New Product Payload ---");
-    console.log(JSON.stringify(payloadToPrint, null, 2));
-    console.log("----------------------------------");
-    Alert.alert("Debug Info", "Product payload printed to console.");
   };
 
   const handleLogout = () => {
@@ -343,6 +333,70 @@ const Homepage = () => {
       </View>
     </View>
   ), []);
+
+  // --- UPDATED MODAL DROPDOWN COMPONENT ---
+  const DiscountTypeSelector = ({ value, onSelect }) => {
+    const [modalVisible, setModalVisible] = useState(false);
+    
+    const getLabel = (val) => {
+        if(val === 'PERCENTAGE') return '% Percentage';
+        if(val === 'FLAT') return '₹ Flat Amount'; 
+        return 'Select Type';
+    };
+
+    const handleSelect = (val) => {
+        onSelect(val);
+        setModalVisible(false);
+    };
+
+    return (
+      <View className="mb-4 flex-1">
+        <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">Discount Type</Text>
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)}
+          className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 h-12 px-3 justify-between active:bg-gray-100"
+        >
+           <View className="flex-row items-center">
+              <View className="pr-2 border-r border-gray-200 mr-2">
+                 <Ionicons name="pricetag" size={20} color="#6B7280" />
+              </View>
+              <Text className="text-gray-800 text-base">{getLabel(value)}</Text>
+           </View>
+           <Ionicons name="chevron-down" size={20} color="#6B7280" />
+        </TouchableOpacity>
+        
+        {/* Modal for Selection */}
+        <Modal visible={modalVisible} transparent animationType="fade">
+            <TouchableOpacity 
+                className="flex-1 bg-black/50 justify-center items-center p-4"
+                activeOpacity={1}
+                onPress={() => setModalVisible(false)}
+            >
+                <View className="bg-white w-full max-w-xs rounded-2xl overflow-hidden shadow-xl p-4">
+                    <Text className="text-lg font-bold text-gray-800 mb-4 text-center">Select Discount Type</Text>
+                    
+                    <TouchableOpacity 
+                        onPress={() => handleSelect('PERCENTAGE')}
+                        className={`p-4 border border-gray-200 rounded-xl mb-3 flex-row items-center ${value === 'PERCENTAGE' ? 'bg-blue-50 border-blue-500' : 'bg-gray-50'}`}
+                    >
+                        <Ionicons name="pricetag-outline" size={20} color={value === 'PERCENTAGE' ? '#2563EB' : 'gray'} />
+                        <Text className={`ml-3 text-base font-semibold ${value === 'PERCENTAGE' ? 'text-blue-700' : 'text-gray-700'}`}>% Percentage</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        onPress={() => handleSelect('FLAT')}
+                        className={`p-4 border border-gray-200 rounded-xl flex-row items-center ${value === 'FLAT' ? 'bg-blue-50 border-blue-500' : 'bg-gray-50'}`}
+                    >
+                        <Ionicons name="cash-outline" size={20} color={value === 'FLAT' ? '#2563EB' : 'gray'} />
+                        <Text className={`ml-3 text-base font-semibold ${value === 'FLAT' ? 'text-blue-700' : 'text-gray-700'}`}>₹ Flat Amount</Text>
+                    </TouchableOpacity>
+
+                </View>
+            </TouchableOpacity>
+        </Modal>
+      </View>
+    );
+  };
 
   const renderProduct = ({ item }) => (
     <View
@@ -471,7 +525,7 @@ const Homepage = () => {
         </View>
       </View>
 
-      {/* --- REPLACED SCROLLVIEW WITH DROPDOWN TRIGGER --- */}
+      {/* --- DROPDOWN TRIGGER --- */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100 z-0">
         <View className="w-64 mr-4">
           <TouchableOpacity
@@ -532,7 +586,7 @@ const Homepage = () => {
           <View className="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90%] border border-gray-100">
             <Text className="text-2xl font-bold text-center mb-6 text-gray-800 border-b pb-4 border-gray-100">Edit Product</Text>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View className="flex-row gap-4">
                 <ModernFormInput label="Name" value={editData.name} onChangeText={(t) => setEditData({...editData, name: t})} icon="pricetag" />
                 <ModernFormInput label="Barcode" value={editData.barcode} onChangeText={(t) => setEditData({...editData, barcode: t})} icon="qr-code" />
@@ -545,7 +599,16 @@ const Homepage = () => {
 
               <View className="flex-row gap-4">
                 <ModernFormInput label="Category ID" value={editData.categoryId} onChangeText={(t) => setEditData({...editData, categoryId: t})} keyboardType="numeric" icon="list" />
-                <ModernFormInput label="Discount Val" value={editData.discountValue} onChangeText={(t) => setEditData({...editData, discountValue: t})} keyboardType="numeric" icon="trending-down" />
+                {/* MODAL Discount Selector */}
+                <DiscountTypeSelector 
+                    value={editData.discountType} 
+                    onSelect={(val) => setEditData({...editData, discountType: val})} 
+                />
+              </View>
+              
+              <View className="flex-row gap-4">
+                <ModernFormInput label="Discount Value" value={editData.discountValue} onChangeText={(t) => setEditData({...editData, discountValue: t})} keyboardType="numeric" icon="trending-down" />
+                <View className="flex-1" />
               </View>
             </ScrollView>
 
@@ -572,7 +635,7 @@ const Homepage = () => {
               <Text className="text-2xl font-bold text-gray-800">Add New Product</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text className="text-gray-400 font-bold mb-3 text-xs uppercase">Basic Information</Text>
               
               <ModernFormInput
@@ -630,14 +693,23 @@ const Homepage = () => {
                   keyboardType="numeric"
                   icon="list-outline"
                 />
-                <ModernFormInput
-                  label="Discount Value"
-                  placeholder="0"
-                  value={newProductData.discountValue}
-                  onChangeText={(t) => setNewProductData(prev => ({ ...prev, discountValue: t }))}
-                  keyboardType="numeric"
-                  icon="trending-down-outline"
+                {/* MODAL Discount Selector */}
+                <DiscountTypeSelector 
+                    value={newProductData.discountType} 
+                    onSelect={(val) => setNewProductData(prev => ({...prev, discountType: val}))} 
                 />
+              </View>
+              
+              <View className="flex-row gap-3">
+                  <ModernFormInput
+                    label="Discount Value"
+                    placeholder="0"
+                    value={newProductData.discountValue}
+                    onChangeText={(t) => setNewProductData(prev => ({ ...prev, discountValue: t }))}
+                    keyboardType="numeric"
+                    icon="trending-down-outline"
+                  />
+                  <View className="flex-1"/>
               </View>
             </ScrollView>
 

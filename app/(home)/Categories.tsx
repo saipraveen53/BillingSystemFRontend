@@ -87,7 +87,9 @@ const Categories = () => {
   const fetchCategories = async () => {
     try {
       let response = await rootApi.get(`api/billing/category/all`);
-      setCategories(response.data);
+      // FIX 1: Sort categories by ID Ascending
+      const sortedCategories = response.data.sort((a, b) => a.id - b.id);
+      setCategories(sortedCategories);
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -176,9 +178,11 @@ const Categories = () => {
 
       await rootApi.put(`api/billing/category/${editData.id}`, dto);
 
-      // Optimistic Update
+      // FIX 2: Optimistic Update with Type Safety and Re-sorting
       setCategories((prev) =>
-        prev.map((cat) => (cat.id === editData.id ? { ...cat, ...dto, id: editData.id } : cat))
+        prev.map((cat) => 
+            (cat.id.toString() === editData.id.toString() ? { ...cat, ...dto, id: editData.id } : cat)
+        ).sort((a, b) => a.id - b.id)
       );
 
       setEditModalVisible(false);
@@ -239,9 +243,9 @@ const Categories = () => {
       </View>
 
       <View className={`mt-2 py-1 px-3 rounded-lg self-start ${item.active ? 'bg-green-100' : 'bg-red-100'}`}>
-         <Text className={`text-[10px] font-bold uppercase ${item.active ? 'text-green-700' : 'text-red-700'}`}>
-           {item.active ? 'Active' : 'Inactive'}
-         </Text>
+          <Text className={`text-[10px] font-bold uppercase ${item.active ? 'text-green-700' : 'text-red-700'}`}>
+            {item.active ? 'Active' : 'Inactive'}
+          </Text>
       </View>
     </View>
   );

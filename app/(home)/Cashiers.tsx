@@ -18,31 +18,41 @@ import {
 } from 'react-native';
 import { rootApi } from '../(utils)/axiosInstance';
 
-// --- REUSABLE MODERN INPUT COMPONENT (Outside to fix focus issue) ---
-const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default', secureTextEntry = false, icon, placeholder }) => (
-  <View className="mb-4 flex-1">
-    <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">
-      {label}
-    </Text>
-    <View className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 focus:border-blue-500 focus:bg-white overflow-hidden h-12">
-      {icon && (
-        <View className="pl-3 pr-2 border-r border-gray-200">
-          <Ionicons name={icon} size={20} color="#6B7280" />
-        </View>
-      )}
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        className="flex-1 px-3 text-gray-800 text-base"
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        style={Platform.OS === 'web' ? { outline: 'none' } : undefined}
-      />
+// --- REUSABLE MODERN INPUT COMPONENT (Updated with Eye Icon Logic) ---
+const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default', isPassword = false, icon, placeholder }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <View className="mb-4 flex-1">
+      <Text className="text-xs text-gray-500 font-bold mb-1.5 uppercase tracking-wider">
+        {label}
+      </Text>
+      <View className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 focus:border-blue-500 focus:bg-white overflow-hidden h-12">
+        {icon && (
+          <View className="pl-3 pr-2 border-r border-gray-200">
+            <Ionicons name={icon} size={20} color="#6B7280" />
+          </View>
+        )}
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          className="flex-1 px-3 text-gray-800 text-base"
+          keyboardType={keyboardType}
+          secureTextEntry={isPassword && !showPassword} // Toggle logic
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+          style={Platform.OS === 'web' ? { outline: 'none' } : undefined}
+        />
+        {/* Eye Icon for Password Fields */}
+        {isPassword && (
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="px-3">
+             <Ionicons name={showPassword ? "eye" : "eye-off"} size={20} color="#6B7280" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const Cashiers = () => {
   const { width } = useWindowDimensions();
@@ -77,7 +87,9 @@ const Cashiers = () => {
       setDataLoading(true);
       const response = await rootApi.get("api/user/allCashiers");
       console.log("Fetched Cashiers Data:", response.data);
-      setCashiers(response.data);
+      // FIX 1: Sort by ID Ascending
+      const sortedCashiers = response.data.sort((a, b) => a.id - b.id);
+      setCashiers(sortedCashiers);
     } catch (error) {
       console.log("Fetch Error:", error);
     } finally {
@@ -172,9 +184,7 @@ const Cashiers = () => {
     const isActive = item.active === true || item.isActive === true;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => toggleCashierStatus(item)}
+      <View
         style={{
             flex: 1,
             margin: 8,
@@ -203,6 +213,9 @@ const Cashiers = () => {
         <Text className={`text-xl font-bold mb-1 text-center ${isActive ? 'text-gray-800' : 'text-gray-500'}`} numberOfLines={1}>
           {item.name}
         </Text>
+        
+        {/* Display ID for reference */}
+        <Text className="text-xs text-gray-400 font-mono mb-2">ID: {item.id}</Text>
 
         <View className="flex-row items-center mt-2 bg-gray-50 px-3 py-1 rounded-full">
           <MaterialIcons name="email" size={14} color={isActive ? "#6B7280" : "#9CA3AF"} />
@@ -214,9 +227,17 @@ const Cashiers = () => {
           <Text className={`text-xs ml-2 font-medium ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>{item.phone}</Text>
         </View>
         
-        {/* Status Hint */}
-        <Text className="text-[10px] text-gray-300 mt-4">Tap to Toggle Status</Text>
-      </TouchableOpacity>
+        {/* FIX 2: Specific Button for Status Toggle */}
+        <TouchableOpacity 
+            onPress={() => toggleCashierStatus(item)}
+            className={`mt-6 px-5 py-2 rounded-xl border ${isActive ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}
+        >
+            <Text className={`font-bold text-xs ${isActive ? 'text-red-600' : 'text-green-600'}`}>
+                {isActive ? "Deactivate User" : "Activate User"}
+            </Text>
+        </TouchableOpacity>
+
+      </View>
     );
   };
 
@@ -347,13 +368,13 @@ const Cashiers = () => {
                 icon="mail-outline"
               />
 
-              {/* Row 3: Password */}
+              {/* Row 3: Password with Eye Icon (FIX 3) */}
               <ModernFormInput
                 label="Password"
                 placeholder="******"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                isPassword={true} // Enabled Eye Toggle
                 icon="lock-closed-outline"
               />
             </ScrollView>

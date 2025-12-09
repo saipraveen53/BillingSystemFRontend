@@ -117,7 +117,7 @@ const Homepage = () => {
 
       console.log("Toggling Status for ID:", item.id, "URL:", url);
 
-      await rootApi.patch(url);
+      await rootApi.put(url);
     } catch (error) {
       console.log('Toggle Error:', error);
       Alert.alert("Error", "Status update failed. Reverting changes.");

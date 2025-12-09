@@ -1,6 +1,6 @@
 import { Feather, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router'; // Updated Import
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,6 +38,26 @@ const initialPasswordFormData = {
 const Homepage = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
+
+  // --- AUTH CHECK: PREVENT BACK NAVIGATION AFTER LOGOUT ---
+  useFocusEffect(
+    useCallback(() => {
+      const checkAuth = async () => {
+        try {
+          const token = await AsyncStorage.getItem("userToken");
+          // టోకెన్ లేకపోతే లాగిన్ పేజీకి పంపించేస్తుంది
+          if (!token) {
+            router.replace("/");
+          }
+        } catch (error) {
+          console.log("Auth Check Error:", error);
+        }
+      };
+      
+      checkAuth();
+    }, [])
+  );
+  // -------------------------------------------------------
 
   const numColumns = width > 900 ? 3 : 1;
   const isWeb = width > 900;
@@ -453,7 +473,6 @@ const Homepage = () => {
 
       {/* --- REPLACED SCROLLVIEW WITH DROPDOWN TRIGGER --- */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100 z-0">
-        {/* CHANGED: Removed flex-1, added w-64 to fix stretching */}
         <View className="w-64 mr-4">
           <TouchableOpacity
             onPress={() => setCategoryDropdownVisible(true)}
@@ -476,7 +495,6 @@ const Homepage = () => {
             >
               <Ionicons name="add" size={24} color="white" />
             </TouchableOpacity>
-            {/* CHANGED: Position moved to left (right-12) to avoid scrollbar clipping */}
             {hoveredButton === 'product' && (
               <View className="absolute top-2 right-12 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
                 <Text className="text-white text-xs font-bold">Add Product</Text>

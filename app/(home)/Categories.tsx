@@ -15,6 +15,10 @@ import {
   View,
   useWindowDimensions
 } from 'react-native';
+// --- 1. IMPORTS FOR AUTH CHECK ---
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
+// ---------------------------------
 import { rootApi } from '../(utils)/axiosInstance';
 
 // --- INITIAL STATE FOR NEW CATEGORY ---
@@ -51,19 +55,45 @@ const ModernFormInput = ({ label, value, onChangeText, keyboardType = 'default',
 );
 
 const Categories = () => {
+  const router = useRouter(); // Initialize Router
   const { width } = useWindowDimensions();
   const isWeb = width > 900;
-  // CHANGED: numColumns to 3 for web to match Homepage
   const numColumns = isWeb ? 3 : 1; 
+
+  // --- 2. AUTH CHECK STATE ---
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // --- 3. AUTH CHECK LOGIC (PREVENT BACK NAV) ---
+  useFocusEffect(
+    useCallback(() => {
+      const checkAuth = async () => {
+        try {
+          setIsCheckingAuth(true); // Start loading
+          const token = await AsyncStorage.getItem("userToken");
+          
+          if (!token) {
+            // Token missing? Redirect to Login immediately
+            router.replace("/");
+          } else {
+            // Token found? Show the page
+            setIsCheckingAuth(false);
+          }
+        } catch (error) {
+          console.log("Auth Check Error:", error);
+          router.replace("/");
+        }
+      };
+      
+      checkAuth();
+    }, [])
+  );
+  // ----------------------------------------------
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // CHANGED: Added Search Query State
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // CHANGED: Added Hover State for Tooltip
   const [hoveredButton, setHoveredButton] = useState(null);
 
   // --- ADD CATEGORY STATES ---
@@ -80,14 +110,17 @@ const Categories = () => {
     active: true,
   });
 
+  // --- FETCH DATA (Only after Auth Check passes) ---
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (!isCheckingAuth) {
+        fetchCategories();
+    }
+  }, [isCheckingAuth]);
 
   const fetchCategories = async () => {
     try {
       let response = await rootApi.get(`api/billing/category/all`);
-      // FIX 1: Sort categories by ID Ascending
+      // Sort categories by ID Ascending
       const sortedCategories = response.data.sort((a, b) => a.id - b.id);
       setCategories(sortedCategories);
     } catch (error) {
@@ -103,7 +136,6 @@ const Categories = () => {
     fetchCategories();
   }, []);
 
-  // CHANGED: Filter Logic based on Search Query
   const filteredCategories = categories.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -113,9 +145,6 @@ const Categories = () => {
     );
   });
 
-  // ---------------------------------------------
-  //           ADD CATEGORY LOGIC
-  // ---------------------------------------------
   const handleAddCategory = async () => {
     try {
       if (!newCategoryData.name) {
@@ -130,16 +159,13 @@ const Categories = () => {
         active: newCategoryData.active,
       };
 
-      // Using rootApi instead of hardcoded URL
       await rootApi.post(`api/billing/category/create`, dto);
       
       Alert.alert("Success", "Category added successfully!");
       
-      // Reset and Close
       setNewCategoryData(initialNewCategoryState);
       setAddCategoryModalVisible(false);
       
-      // Refresh List
       fetchCategories();
 
     } catch (error) {
@@ -148,9 +174,6 @@ const Categories = () => {
     }
   };
 
-  // ---------------------------------------------
-  //           EDIT CATEGORY LOGIC
-  // ---------------------------------------------
   const openEditModal = (item) => {
     setEditData({
       id: item.id,
@@ -178,7 +201,7 @@ const Categories = () => {
 
       await rootApi.put(`api/billing/category/${editData.id}`, dto);
 
-      // FIX 2: Optimistic Update with Type Safety and Re-sorting
+      // Optimistic Update with Type Safety and Re-sorting
       setCategories((prev) =>
         prev.map((cat) => 
             (cat.id.toString() === editData.id.toString() ? { ...cat, ...dto, id: editData.id } : cat)
@@ -197,7 +220,6 @@ const Categories = () => {
   const renderCategoryItem = ({ item }) => (
     <View 
       className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 overflow-hidden"
-      // CHANGED: Style to match Homepage 3-column layout
       style={{
         flex: 1,
         margin: 8,
@@ -250,6 +272,15 @@ const Categories = () => {
     </View>
   );
 
+  // --- 4. UI GUARD (Hide content while checking auth) ---
+  if (isCheckingAuth) {
+    return (
+        <View className="flex-1 justify-center items-center bg-gray-100">
+            <ActivityIndicator size="large" color="#1E3A8A" />
+        </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-gray-100">
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
@@ -264,7 +295,6 @@ const Categories = () => {
             </Text>
           </View>
           
-          {/* --- ADD BUTTON IN HEADER WITH TOOLTIP --- */}
           <View className="relative z-50">
             <TouchableOpacity 
               onPress={() => setAddCategoryModalVisible(true)}
@@ -275,7 +305,6 @@ const Categories = () => {
               <Ionicons name="add" size={24} color="#1E3A8A" />
             </TouchableOpacity>
             
-            {/* CHANGED: Tooltip Position fixed (Left side) to avoid overlapping search bar */}
             {hoveredButton === 'add' && (
               <View className="absolute top-2 right-14 bg-gray-800 px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
                 <Text className="text-white text-xs font-bold">Add Category</Text>
@@ -284,7 +313,6 @@ const Categories = () => {
           </View>
         </View>
 
-        {/* CHANGED: Search Bar Added */}
         <View className="flex-row items-center bg-white rounded-full px-3 h-10 shadow-sm">
           <Ionicons name="search" size={18} color="#9CA3AF" />
           <TextInput
@@ -309,8 +337,8 @@ const Categories = () => {
           <ActivityIndicator size="large" color="#1E3A8A" className="mt-10" />
         ) : (
           <FlatList
-            key={numColumns} // CHANGED: Key changes with columns to force re-render
-            data={filteredCategories} // CHANGED: Using filtered list
+            key={numColumns} 
+            data={filteredCategories}
             keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
             renderItem={renderCategoryItem}
             numColumns={numColumns}

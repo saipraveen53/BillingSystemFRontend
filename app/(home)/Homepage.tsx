@@ -1,6 +1,6 @@
 import { Feather, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useRouter } from 'expo-router'; // Updated Import
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,24 +39,37 @@ const Homepage = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  // --- AUTH CHECK: PREVENT BACK NAVIGATION AFTER LOGOUT ---
+  // --- 1. AUTH CHECK STATE ---
+  // పేజీ లోడ్ అయ్యేటప్పుడు కంటెంట్ చూపించకుండా ఆపడానికి ఈ స్టేట్ వాడుతున్నాం
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // --- AUTH CHECK LOGIC ---
   useFocusEffect(
     useCallback(() => {
       const checkAuth = async () => {
         try {
+          // ప్రతిసారి పేజీ ఫోకస్ అయినప్పుడు లోడింగ్ స్టేట్ ఆన్ చేయాలి
+          setIsCheckingAuth(true); 
+          
           const token = await AsyncStorage.getItem("userToken");
-          // టోకెన్ లేకపోతే లాగిన్ పేజీకి పంపించేస్తుంది
+          
           if (!token) {
+            // టోకెన్ లేకపోతే వెంటనే లాగిన్ కి పంపించు
             router.replace("/");
+          } else {
+            // టోకెన్ ఉంటేనే పేజీని చూపించు
+            setIsCheckingAuth(false);
           }
         } catch (error) {
           console.log("Auth Check Error:", error);
+          router.replace("/");
         }
       };
       
       checkAuth();
     }, [])
   );
+
   // -------------------------------------------------------
 
   const numColumns = width > 900 ? 3 : 1;
@@ -98,8 +111,11 @@ const Homepage = () => {
   });
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    // Auth check పూర్తయిన తర్వాతే డేటా ఫెచ్ చేయాలి (Optional optimization)
+    if (!isCheckingAuth) {
+        fetchProducts();
+    }
+  }, [isCheckingAuth]);
 
   const fetchProducts = async () => {
     try {
@@ -184,7 +200,7 @@ const Homepage = () => {
         dto
       );
 
-      // --- BUG FIX HERE: Ensure ID comparison uses toString() to match types ---
+      // Ensure ID comparison uses toString() to match types
       setProducts((prev) =>
         prev.map((p) => (p.id.toString() === editData.id.toString() ? response.data : p)).sort((a, b) => a.id - b.id)
       );
@@ -251,6 +267,8 @@ const Homepage = () => {
 
   const performLogout = async () => {
     await AsyncStorage.clear();
+    // Webలో అయితే replace వాడుతున్నాం, ఇది history stack ని పూర్తిగా క్లియర్ చేయదు కానీ 
+    // మన Auth Check వాళ్ళని మళ్ళీ లోపలికి రానివ్వదు.
     router.replace('/');
   };
 
@@ -487,6 +505,16 @@ const Homepage = () => {
       </View>
     </View>
   );
+
+  // --- 2. AUTH CHECK UI GUARD ---
+  // Checking జరుగుతున్నప్పుడు లేదా టోకెన్ లేనప్పుడు పేజీ కంటెంట్ చూపించదు
+  if (isCheckingAuth) {
+    return (
+        <View className="flex-1 justify-center items-center bg-gray-100">
+            <ActivityIndicator size="large" color="#1E3A8A" />
+        </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-100">
